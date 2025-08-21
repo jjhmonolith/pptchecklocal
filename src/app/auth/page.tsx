@@ -39,14 +39,18 @@ export default function AuthPage() {
       });
 
       const data = await response.json();
+      console.log("Auth response:", { status: response.status, data });
 
       if (response.ok) {
         localStorage.setItem("authToken", data.token);
+        console.log("Token saved, redirecting to /upload");
         router.push("/upload");
       } else {
+        console.log("Auth failed:", data);
         setError(data.error || "인증에 실패했습니다.");
       }
-    } catch {
+    } catch (err) {
+      console.error("Auth error:", err);
       setError("네트워크 오류가 발생했습니다.");
     } finally {
       setIsLoading(false);
@@ -85,7 +89,8 @@ export default function AuthPage() {
               </CardTitle>
               <CardDescription className="text-gray-600">
                 PPT 맞춤법 검사기에 오신 것을 환영합니다!<br />
-                계속하려면 패스워드를 입력해주세요.
+                계속하려면 패스워드를 입력해주세요.<br />
+                <span className="text-amber-600 font-medium text-sm">패스워드: ppt-checker-2024</span>
               </CardDescription>
             </CardHeader>
 

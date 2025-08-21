@@ -1,12 +1,19 @@
 import { NextRequest, NextResponse } from "next/server";
 import { sign } from "jsonwebtoken";
 
+// 임시로 하드코딩 (실제 운영에서는 환경변수 사용 필요)
 const SECRET_PASSWORD = process.env.AUTH_PASSWORD || "ppt-checker-2024";
-const JWT_SECRET = process.env.JWT_SECRET || "ppt-spell-checker-secret-key-2024";
+const JWT_SECRET = process.env.JWT_SECRET || "ppt-spell-checker-secret-key-2024-super-secure";
 
 export async function POST(request: NextRequest) {
   try {
     const { password } = await request.json();
+
+    console.log("Auth attempt:", {
+      received: password,
+      expected: SECRET_PASSWORD,
+      match: password === SECRET_PASSWORD
+    });
 
     if (!password) {
       return NextResponse.json(
@@ -16,6 +23,7 @@ export async function POST(request: NextRequest) {
     }
 
     if (password !== SECRET_PASSWORD) {
+      console.log("Password mismatch:", { password, SECRET_PASSWORD });
       return NextResponse.json(
         { error: "잘못된 패스워드입니다." },
         { status: 401 }
