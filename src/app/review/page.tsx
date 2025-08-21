@@ -373,7 +373,7 @@ function ReviewContent() {
           'Authorization': `Bearer ${authToken}`,
         },
         body: JSON.stringify({
-          fileUrl: '/api/mock-file-url', // 실제로는 업로드된 파일 URL 사용
+          fileUrl: `/api/file/${currentFile.fileId}`, // 업로드된 실제 파일 URL 사용
           fileName: currentFile.fileName,
           selectedCorrections,
         }),
