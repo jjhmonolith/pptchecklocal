@@ -3,16 +3,14 @@
     "src/app/api/upload-file/route.ts": {
       "maxDuration": 60
     },
+    "src/app/api/upload-blob/route.ts": {
+      "maxDuration": 60
+    },
     "src/app/api/analyze/route.ts": {
       "maxDuration": 300
     },
     "src/app/api/ai-analyze/route.ts": {
       "maxDuration": 300
-    }
-  },
-  "api": {
-    "bodyParser": {
-      "sizeLimit": "50mb"
     }
   }
 }
