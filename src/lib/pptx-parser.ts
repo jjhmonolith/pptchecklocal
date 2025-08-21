@@ -125,27 +125,69 @@ export class PPTXParser {
   }
   
   /**
-   * 슬라이드 XML을 파싱하여 텍스트 추출
+   * 슬라이드 XML을 파싱하여 텍스트박스별로 텍스트 추출
    */
   private static parseSlideXML(xml: string, slideIndex: number): PPTXSlide {
     const shapes: PPTXShape[] = [];
     
     try {
-      // 간단한 정규식을 사용한 텍스트 추출
-      // 실제로는 XML 파서를 사용하는 것이 좋지만, 서버리스 환경에서 가볍게 처리
+      // PowerPoint XML 구조에서 각 셰이프(텍스트박스)별로 분리
+      // <p:sp> 태그가 각각의 셰이프(텍스트박스)를 나타냄
+      const shapeRegex = /<p:sp[^>]*>[\s\S]*?<\/p:sp>/g;
+      const shapeMatches = [...xml.matchAll(shapeRegex)];
       
-      // <a:t> 태그에서 텍스트 추출
-      const textRegex = /<a:t[^>]*>(.*?)<\/a:t>/g;
-      const textArray: RegExpMatchArray[] = [];
-      let match;
-      while ((match = textRegex.exec(xml)) !== null) {
-        textArray.push(match);
-      }
+      console.log(`슬라이드 ${slideIndex}: ${shapeMatches.length}개 셰이프 발견`);
       
-      if (textArray.length > 0) {
-        const textRuns: TextRun[] = [];
+      shapeMatches.forEach((shapeMatch, shapeIndex) => {
+        const shapeXml = shapeMatch[0];
         
-        textArray.forEach((match, index) => {
+        // 각 셰이프에서 텍스트 추출
+        const textRegex = /<a:t[^>]*>(.*?)<\/a:t>/g;
+        const textRuns: TextRun[] = [];
+        let textMatch;
+        let runIndex = 0;
+        
+        while ((textMatch = textRegex.exec(shapeXml)) !== null) {
+          const text = textMatch[1]
+            .replace(/&lt;/g, '<')
+            .replace(/&gt;/g, '>')
+            .replace(/&amp;/g, '&')
+            .replace(/&quot;/g, '"')
+            .trim();
+            
+          if (text) {
+            textRuns.push({
+              text,
+              paragraph_idx: 0,
+              run_idx: runIndex++,
+              font_name: '기본',
+              font_size: 12,
+              is_bold: shapeXml.includes('<a:b val="1"/>') || shapeXml.includes('<a:b/>'),
+              is_italic: shapeXml.includes('<a:i val="1"/>') || shapeXml.includes('<a:i/>')
+            });
+          }
+        }
+        
+        // 텍스트가 있는 셰이프만 추가
+        if (textRuns.length > 0) {
+          shapes.push({
+            shapeId: `shape-${slideIndex}-${shapeIndex + 1}`,
+            shapeType: 'TEXT_BOX',
+            textRuns
+          });
+          console.log(`셰이프 ${shapeIndex + 1}: ${textRuns.length}개 텍스트런, "${textRuns.map(r => r.text).join(' ').substring(0, 50)}..."`);
+        }
+      });
+      
+      // 백업: p:sp 태그로 찾지 못한 경우 기존 방식 사용
+      if (shapes.length === 0) {
+        console.log(`슬라이드 ${slideIndex}: p:sp 태그 없음, 기존 방식으로 fallback`);
+        const textRegex = /<a:t[^>]*>(.*?)<\/a:t>/g;
+        const textRuns: TextRun[] = [];
+        let match;
+        let runIndex = 0;
+        
+        while ((match = textRegex.exec(xml)) !== null) {
           const text = match[1]
             .replace(/&lt;/g, '<')
             .replace(/&gt;/g, '>')
@@ -156,15 +198,15 @@ export class PPTXParser {
           if (text) {
             textRuns.push({
               text,
-              paragraph_idx: Math.floor(index / 3), // 대략적 추정
-              run_idx: index % 3,
+              paragraph_idx: 0,
+              run_idx: runIndex++,
               font_name: '기본',
               font_size: 12,
               is_bold: xml.includes('<a:b val="1"/>') || xml.includes('<a:b/>'),
               is_italic: xml.includes('<a:i val="1"/>') || xml.includes('<a:i/>')
             });
           }
-        });
+        }
         
         if (textRuns.length > 0) {
           shapes.push({

@@ -180,12 +180,10 @@ async function prepareTextChunks(pptxData: {
   const chunks: TextChunk[] = [];
   
   if (pptxData && pptxData.slides) {
-    // 슬라이드별로 청크 생성 (모든 셰이프 텍스트를 하나로 합침)
+    // 텍스트박스(셰이프)별로 청크 생성
     pptxData.slides.forEach((slide, slideIndex: number) => {
       if (slide.shapes) {
-        const slideTexts: string[] = [];
-        
-        slide.shapes.forEach((shape) => {
+        slide.shapes.forEach((shape, shapeIndex: number) => {
           if (shape.textRuns && shape.textRuns.length > 0) {
             const shapeText = shape.textRuns
               .map((run) => run.text)
@@ -193,21 +191,15 @@ async function prepareTextChunks(pptxData: {
               .trim();
               
             if (shapeText) {
-              slideTexts.push(shapeText);
+              chunks.push({
+                text: shapeText,
+                slideIndex: slideIndex + 1,
+                shapeId: shape.shapeId || `shape-${slideIndex + 1}-${shapeIndex + 1}`,
+                runPath: [slideIndex, shapeIndex]
+              });
             }
           }
         });
-        
-        // 슬라이드의 모든 텍스트를 하나로 합치기
-        if (slideTexts.length > 0) {
-          const slideText = slideTexts.join('\n\n').trim();
-          chunks.push({
-            text: slideText,
-            slideIndex: slideIndex + 1,
-            shapeId: `slide-${slideIndex + 1}`,
-            runPath: [slideIndex, 0]
-          });
-        }
       }
     });
     
@@ -266,9 +258,9 @@ async function processTextChunk(chunk: TextChunk, apiKey: string, index: number)
           },
           {
             role: 'user',
-            content: `다음 프레젠테이션 텍스트를 검사하고 교정 제안을 JSON 형태로 제공해 주세요.
+            content: `다음은 하나의 텍스트박스 내용입니다. 이 텍스트박스 전체를 검사하고 교정 제안을 JSON 형태로 제공해 주세요.
 
-검사할 텍스트:
+**텍스트박스 내용:**
 "${chunk.text}"
 
 **교정 기준 (중요도 순):**
@@ -281,15 +273,16 @@ async function processTextChunk(chunk: TextChunk, apiKey: string, index: number)
    - 조사, 어미, 접사 띄어쓰기 오류
    - 예: "안녕 하세요" → "안녕하세요"
 
-3. **문장부호 (punctuation)**: 문장부호 사용법
-   - 마침표, 쉼표, 따옴표 등의 올바른 사용
-   - 예: "안녕하세요 ." → "안녕하세요."
+3. **문장부호 (punctuation)**: 문장부호 사용법 (신중히 판단)
+   - 완전한 문장에는 마침표 필요: "좋은 아침입니다" → "좋은 아침입니다."
+   - 제목, 라벨, 단어구에는 마침표 불필요: "메인 화면", "로그인 버튼", "사용자 설정"
+   - 불완전한 문구에는 마침표 추가하지 마세요: "~한 화면", "~기능", "~메뉴"
 
 4. **문법오류 (grammar)**: 명백한 문법 오류만
    - 조사 사용 오류, 시제 불일치 등
    - 예: "을/를" 혼용, "다/요" 체계 혼용
 
-5. **긴문장분할 (long_sentence)**: 지나치게 긴 문장 (80자 이상)
+5. **긴문장분할 (long_sentence)**: 지나치게 긴 문장 (100자 이상)
    - 읽기 어려운 긴 문장을 자연스럽게 분할
    - 의미 변경 없이 문장부호로만 분할
 
@@ -302,13 +295,19 @@ async function processTextChunk(chunk: TextChunk, apiKey: string, index: number)
 - 문제/퀴즈의 정답 변경 금지  
 - 전문 용어나 고유명사 변경 금지
 - 문장 형태(평어/경어, 구어/문어) 변경 금지
+- 제목이나 라벨에 마침표 추가 금지
 - 서식이나 레이아웃 변경 금지
+
+**교정 단위 원칙:**
+- 가능하면 텍스트박스 전체 또는 완전한 문장 단위로 교정
+- 문장이 여러 개인 경우 각 문장별로 교정
+- 원본과 수정본이 동일한 경우 절대 제안하지 마세요
 
 응답 형식 (JSON):
 {
   "corrections": [
     {
-      "original": "원본 텍스트",
+      "original": "텍스트박스 전체 또는 완전한 문장",
       "revised": "교정된 텍스트", 
       "type": "spelling|spacing|punctuation|grammar|long_sentence|expression",
       "reason": "교정 이유 설명",
@@ -325,6 +324,7 @@ async function processTextChunk(chunk: TextChunk, apiKey: string, index: number)
 **중요한 점:**
 - 확실한 오류만 제안하세요
 - 의미 변경이 의심되면 제안하지 마세요
+- 원본과 수정본이 같으면 절대 제안하지 마세요
 - 빈 배열 {"corrections": []} 도 유효한 응답입니다`
           }
         ],
@@ -379,62 +379,32 @@ function generateMockAIAnalysis(pptxData: {
       slideIndex: 1,
       shapeId: "shape-1-1",
       runPath: [0, 0],
-      original: "안녕 하세요",
-      revised: "안녕하세요",
-      type: "spacing",
-      reason: "인사말은 띄어쓰지 않습니다. (한글 맞춤법 띄어쓰기 규정)",
-      severity: "critical"
-    },
-    {
-      slideIndex: 1,
-      shapeId: "shape-1-2",
-      runPath: [1, 0],
-      original: "프레젠테이숀",
-      revised: "프레젠테이션",
+      original: "안녕 하세요. 프레젠테이숀을 시작하겠읍니다.",
+      revised: "안녕하세요. 프레젠테이션을 시작하겠습니다.",
       type: "spelling",
-      reason: "'프레젠테이션'이 표준 외래어 표기법에 맞는 올바른 표기입니다.",
+      reason: "띄어쓰기('안녕하세요')와 맞춤법('프레젠테이션', '시작하겠습니다') 오류를 수정했습니다.",
       severity: "critical"
-    },
-    {
-      slideIndex: 1,
-      shapeId: "shape-1-3",
-      runPath: [1, 1],
-      original: "안녕하세요 .",
-      revised: "안녕하세요.",
-      type: "punctuation",
-      reason: "마침표 앞에 공백이 있으면 안 됩니다.",
-      severity: "important"
     },
     {
       slideIndex: 2,
       shapeId: "shape-2-1",
-      runPath: [0, 1],
-      original: "데이타베이스를 사용해서 정보를 저장하고 있읍니다",
-      revised: "데이터베이스를 사용해서 정보를 저장하고 있습니다",
+      runPath: [1, 0],
+      original: "데이타베이스 시스템을 사용해서 사용자 정보를 저장하고 관리합니다. 이 시스템은 매우 효율적이고 안전합니다.",
+      revised: "데이터베이스 시스템을 사용해서 사용자 정보를 저장하고 관리합니다. 이 시스템은 매우 효율적이고 안전합니다.",
       type: "spelling",
-      reason: "'데이터'와 '있습니다'가 표준 맞춤법입니다.",
+      reason: "'데이터베이스'가 표준 외래어 표기법에 맞는 올바른 표기입니다.",
       severity: "critical"
     },
     {
       slideIndex: 2,
       shapeId: "shape-2-2",
-      runPath: [1, 0],
-      original: "이 시스템은 매우 복잡하고 어려우며 사용자가 이해하기 힘들고 접근성이 떨어지는 특징을 가지고 있어서 개선이 필요합니다.",
-      revised: "이 시스템은 매우 복잡하고 어려우며 사용자가 이해하기 힘듭니다. 접근성이 떨어지는 특징을 가지고 있어서 개선이 필요합니다.",
+      runPath: [1, 1],
+      original: "주요 기능들: 로그인, 회원가입, 데이터 조회, 리포트 생성, 백업 복원, 사용자 권한 관리, 시스템 모니터링, 로그 분석, 성능 최적화 등의 다양하고 복합적인 기능들을 모두 포함하고 있어서 사용자가 필요로 하는 모든 요구사항을 충족할 수 있습니다.",
+      revised: "주요 기능들: 로그인, 회원가입, 데이터 조회, 리포트 생성, 백업 복원, 사용자 권한 관리, 시스템 모니터링, 로그 분석, 성능 최적화 등의 다양한 기능들을 포함합니다. 이를 통해 사용자가 필요로 하는 모든 요구사항을 충족할 수 있습니다.",
       type: "long_sentence",
-      reason: "80자가 넘는 긴 문장을 읽기 쉽게 두 문장으로 분할했습니다.",
+      reason: "100자가 넘는 긴 문장을 읽기 쉽게 두 문장으로 분할하고 중복 표현을 간소화했습니다.",
       severity: "important"
     },
-    {
-      slideIndex: 3,
-      shapeId: "shape-3-1",
-      runPath: [0, 0],
-      original: "그래서 그러므로",
-      revised: "그러므로",
-      type: "expression",
-      reason: "중복 표현을 제거하여 자연스럽게 개선했습니다.",
-      severity: "minor"
-    }
   ];
 
   const slideCount = pptxData?.slides?.length || 3;

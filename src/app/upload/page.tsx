@@ -51,18 +51,24 @@ export default function UploadPage() {
       return;
     }
 
-    for (const file of pptxFiles) {
-      const fileId = Date.now() + Math.random().toString(36);
-      
-      // 파일 추가
-      const newFile: UploadedFile = {
-        file,
-        id: fileId,
-        status: 'uploading',
-        progress: 0,
-      };
+    // 한 번에 하나의 파일만 처리
+    if (pptxFiles.length > 1) {
+      alert("한 번에 하나의 파일만 업로드할 수 있습니다. 첫 번째 파일만 처리합니다.");
+    }
 
-      setUploadedFiles(prev => [...prev, newFile]);
+    // 첫 번째 파일만 사용
+    const file = pptxFiles[0];
+    const fileId = Date.now() + Math.random().toString(36);
+    
+    // 파일 추가
+    const newFile: UploadedFile = {
+      file,
+      id: fileId,
+      status: 'uploading',
+      progress: 0,
+    };
+
+    setUploadedFiles(prev => [...prev, newFile]);
 
       try {
         const authToken = localStorage.getItem('authToken');
@@ -166,7 +172,6 @@ export default function UploadPage() {
               : f
           )
         );
-      }
     }
   }, []);
 
@@ -175,7 +180,7 @@ export default function UploadPage() {
     accept: {
       'application/vnd.openxmlformats-officedocument.presentationml.presentation': ['.pptx']
     },
-    multiple: true,
+    multiple: false,
     maxSize: 25 * 1024 * 1024, // 25MB (청크 업로드 지원)
   });
 
@@ -189,6 +194,10 @@ export default function UploadPage() {
     if (uploadedFilesList.length === 0) {
       alert("업로드된 파일이 없습니다.");
       return;
+    }
+
+    if (uploadedFilesList.length > 1) {
+      alert('현재는 한 번에 하나의 파일만 분석할 수 있습니다. 첫 번째 파일을 분석합니다.');
     }
 
     setIsProcessing(true);
