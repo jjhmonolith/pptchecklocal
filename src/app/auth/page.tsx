@@ -46,11 +46,9 @@ export default function AuthPage() {
         localStorage.setItem("authToken", data.token);
         console.log("✅ Token saved to localStorage");
         
-        // 강제로 window.location 사용해보기
-        setTimeout(() => {
-          console.log("🔄 Redirecting to /upload");
-          window.location.href = "/upload";
-        }, 100);
+        // Next.js router 사용
+        console.log("🔄 Redirecting to /upload");
+        router.push("/upload");
       } else {
         console.log("Auth failed:", data);
         setError(data.error || "인증에 실패했습니다.");
