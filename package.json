@@ -8,7 +8,8 @@
     "start": "next start",
     "lint": "eslint",
     "python:install": "cd python && pip install -r requirements.txt",
-    "python:test": "cd python && python3 pptx_analyzer.py https://mock-test.example.com/test.pptx"
+    "python:test": "cd python && python3 pptx_analyzer.py https://mock-test.example.com/test.pptx",
+    "ai:test": "cd python && python3 ai_spell_checker.py '안녕 하세요. 프레젠테이숀을 시작하겠읍니다.' your-api-key-here"
   },
   "dependencies": {
     "@radix-ui/react-checkbox": "^1.3.3",

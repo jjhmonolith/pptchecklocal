@@ -43,19 +43,54 @@ export async function POST(request: NextRequest) {
     
     try {
       // Python 스크립트 실행 (실제로는 Python 환경이 필요)
-      const result = await runPythonScript(pythonScriptPath, fileUrl);
+      // 1단계: PPTX 텍스트 추출
+      const pptxResult = await runPythonScript(pythonScriptPath, fileUrl);
+      console.log("PPTX 분석 완료:", pptxResult);
       
-      return NextResponse.json({
-        success: true,
-        jobId: `job-${Date.now()}`,
-        result,
-        message: "분석이 완료되었습니다."
-      });
+      // 2단계: AI 맞춤법 검사 (내부 API 호출)
+      try {
+        const aiResponse = await fetch(`${process.env.NEXTJS_URL || 'http://localhost:3000'}/api/ai-analyze`, {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+            'Authorization': request.headers.get('authorization') || '',
+          },
+          body: JSON.stringify({
+            pptxData: pptxResult
+          }),
+        });
+
+        if (aiResponse.ok) {
+          const aiResult = await aiResponse.json();
+          console.log("AI 분석 완료:", aiResult);
+          
+          return NextResponse.json({
+            success: true,
+            jobId: aiResult.jobId || `job-${Date.now()}`,
+            suggestions: aiResult.suggestions || [],
+            stats: aiResult.stats || pptxResult.stats,
+            message: "PPTX 분석 및 AI 맞춤법 검사가 완료되었습니다."
+          });
+        } else {
+          console.log("AI 분석 실패, PPTX 결과만 반환");
+          // AI 분석 실패 시에도 PPTX 구조 분석 결과는 반환
+          throw new Error("AI 분석 실패");
+        }
+      } catch (aiError) {
+        console.error("AI 분석 오류:", aiError);
+        // AI 분석 실패 시 Mock 데이터 반환
+        const mockResult = generateMockAnalysis(pptxResult);
+        return NextResponse.json({
+          success: true,
+          message: "분석이 완료되었습니다 (AI 없음, Mock 데이터 사용).",
+          ...mockResult
+        });
+      }
 
     } catch (error) {
       console.error("Python script error:", error);
       
-      // Python 환경이 없는 경우 Mock 데이터 반환
+      // Python 환경이 없는 경우 완전 Mock 데이터 반환
       const mockResult = {
         jobId: `mock-job-${Date.now()}`,
         suggestions: [
@@ -141,4 +176,48 @@ function runPythonScript(scriptPath: string, fileUrl: string): Promise<any> {
       reject(error);
     });
   });
+}
+
+function generateMockAnalysis(pptxResult: any) {
+  /**
+   * PPTX 분석 결과를 기반으로 Mock AI 분석 결과 생성
+   */
+  const mockSuggestions = [
+    {
+      slideIndex: 1,
+      shapeId: "shape-1-1",
+      runPath: [0, 0],
+      original: "안녕 하세요",
+      revised: "안녕하세요",
+      type: "spacing",
+      reason: "인사말은 띄어쓰지 않습니다.",
+      severity: "high"
+    },
+    {
+      slideIndex: 1,
+      shapeId: "shape-1-2",
+      runPath: [1, 0],
+      original: "프레젠테이숀",
+      revised: "프레젠테이션",
+      type: "spelling",
+      reason: "'프레젠테이션'이 올바른 표기입니다.",
+      severity: "high"
+    },
+    {
+      slideIndex: 2,
+      shapeId: "shape-2-1",
+      runPath: [0, 1],
+      original: "있읍니다",
+      revised: "있습니다",
+      type: "spelling",
+      reason: "'있습니다'가 표준 맞춤법입니다.",
+      severity: "med"
+    }
+  ];
+
+  return {
+    jobId: `mock-ai-job-${Date.now()}`,
+    suggestions: mockSuggestions,
+    stats: pptxResult?.stats || { slides: 2, shapes: 3, runs: 8, tokensEstimated: 120 }
+  };
 }
