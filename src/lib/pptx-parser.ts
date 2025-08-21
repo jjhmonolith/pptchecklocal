@@ -61,6 +61,25 @@ export class PPTXParser {
       throw error;
     }
   }
+
+  /**
+   * Buffer에서 PPTX 파일 분석 (파일시스템 기반)
+   */
+  static async analyzeFromBuffer(buffer: Buffer, filename: string): Promise<PPTXAnalysisResult> {
+    console.log('PPTX 파일 버퍼 분석 시작:', filename, 'bytes:', buffer.length);
+    
+    try {
+      // Buffer를 ArrayBuffer로 변환
+      const arrayBuffer = buffer.buffer.slice(buffer.byteOffset, buffer.byteOffset + buffer.byteLength);
+      console.log('ArrayBuffer 변환 완료, 크기:', arrayBuffer.byteLength, 'bytes');
+      
+      return await this.analyzeBuffer(arrayBuffer);
+      
+    } catch (error) {
+      console.error('PPTX 버퍼 분석 오류:', error);
+      throw error;
+    }
+  }
   
   /**
    * ArrayBuffer로부터 PPTX 분석

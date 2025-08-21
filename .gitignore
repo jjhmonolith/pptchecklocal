@@ -39,3 +39,4 @@ yarn-error.log*
 # typescript
 *.tsbuildinfo
 next-env.d.ts
+\n# PPT 처리 파일들\nuploads/\ntemp/\nprocessed/\nchunks/\nlogs/\nfile-metadata.json\n*.pptx\n# 환경변수\n.env.local\n# 시스템 파일\nThumbs.db\n

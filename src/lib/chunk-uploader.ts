@@ -75,10 +75,11 @@ export class ChunkUploader {
 
         // 마지막 청크이고 완료되었다면 결과 반환
         if (result.complete) {
-          console.log('청크 업로드 완료:', result.fileUrl);
+          console.log('청크 업로드 완료:', result.fileId);
           return {
             success: true,
-            fileUrl: result.fileUrl,
+            fileId: result.fileId,  // fileId 반환
+            fileUrl: result.fileId, // 호환성을 위해 fileUrl에도 fileId 저장
             filename: result.filename,
             size: result.size
           };

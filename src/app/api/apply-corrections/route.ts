@@ -1,13 +1,9 @@
 import { NextRequest, NextResponse } from "next/server";
 import { verify } from "jsonwebtoken";
 import { PPTXModifier } from "@/lib/pptx-modifier";
+import { FileStorage } from "@/lib/file-storage";
 
 const JWT_SECRET = process.env.JWT_SECRET || "ppt-spell-checker-secret-key-2024-super-secure";
-
-// Global 타입 확장
-declare global {
-  var tempFiles: Map<string, ArrayBuffer> | undefined;
-}
 
 export async function POST(request: NextRequest) {
   try {
@@ -33,79 +29,103 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    const { fileUrl, fileName, selectedCorrections } = await request.json();
+    const { fileId, fileName, selectedCorrections } = await request.json();
 
-    if (!fileUrl || !selectedCorrections) {
+    if (!fileId || !selectedCorrections) {
       return NextResponse.json(
-        { error: "파일 URL과 교정 사항이 필요합니다." },
+        { error: "파일 ID와 교정 사항이 필요합니다." },
         { status: 400 }
       );
     }
 
     console.log("교정 적용 시작:", {
+      fileId,
       fileName,
       correctionsCount: selectedCorrections.length
     });
 
     try {
-      // URL에서 파일 다운로드
-      const origin = request.headers.get('origin') || 
-                     request.headers.get('referer')?.split('/').slice(0, 3).join('/') ||
-                     'http://localhost:3000';
-      const fullFileUrl = fileUrl.startsWith('http') ? fileUrl : `${origin}${fileUrl}`;
+      // 파일 저장소 초기화
+      await FileStorage.init();
       
-      console.log("파일 URL 변환:", { fileUrl, fullFileUrl });
-      const modifiedBuffer = await PPTXModifier.applyCorrections(fullFileUrl, selectedCorrections, token);
+      // 파일 데이터 조회
+      const fileData = await FileStorage.get(fileId);
+      if (!fileData) {
+        return NextResponse.json(
+          { error: "파일을 찾을 수 없습니다. 파일이 만료되었거나 삭제되었을 수 있습니다." },
+          { status: 404 }
+        );
+      }
       
-      // 임시 파일명 생성
+      // 파일 읽기
+      const originalBuffer = await FileStorage.readFile(fileId);
+      if (!originalBuffer) {
+        return NextResponse.json(
+          { error: "파일 읽기에 실패했습니다." },
+          { status: 500 }
+        );
+      }
+      
+      console.log("원본 파일 읽기 완료:", {
+        filename: fileData.filename,
+        size: originalBuffer.length
+      });
+      
+      // PPT 교정 적용 (Buffer에서 직접 처리)
+      const modifiedArrayBuffer = await PPTXModifier.applyCorrectionsFromBuffer(
+        originalBuffer, 
+        selectedCorrections
+      );
+      
+      // ArrayBuffer를 Buffer로 변환
+      const modifiedBuffer = Buffer.from(modifiedArrayBuffer);
+      
+      // Save corrected file to filesystem
       const timestamp = Date.now();
-      const correctedFileName = fileName.replace('.pptx', `_교정됨_${timestamp}.pptx`);
-      
-      // 수정된 파일을 임시 저장소에 저장 (실제로는 파일시스템이나 클라우드 스토리지에 저장)
-      // 현재는 메모리에만 보관하고 다운로드 URL 제공
-      global.tempFiles = global.tempFiles || new Map();
-      global.tempFiles.set(correctedFileName, modifiedBuffer);
-      
-      // 30분 후 임시 파일 삭제
-      setTimeout(() => {
-        if (global.tempFiles) {
-          global.tempFiles.delete(correctedFileName);
-          console.log(`임시 파일 삭제됨: ${correctedFileName}`);
-        }
-      }, 30 * 60 * 1000); // 30분
+      const processedFileId = await FileStorage.storeProcessed(
+        fileId, 
+        modifiedBuffer, 
+        `_corrected_${timestamp}`
+      );
       
       const response = {
         success: true,
         message: `${selectedCorrections.length}개 교정사항이 적용되었습니다.`,
-        downloadUrl: `/api/download/${encodeURIComponent(correctedFileName)}`,
+        downloadFileId: processedFileId,
         appliedCorrections: selectedCorrections.length,
-        fileName: correctedFileName,
-        timestamp: new Date().toISOString()
+        originalFileName: fileData.filename,
+        timestamp: new Date().toISOString(),
+        processedSize: modifiedBuffer.length
       };
 
       console.log("교정 적용 완료:", {
-        fileName: response.fileName,
-        appliedCorrections: response.appliedCorrections
+        originalFile: fileData.filename,
+        processedFileId: processedFileId,
+        appliedCorrections: response.appliedCorrections,
+        processedSizeMB: Math.round(modifiedBuffer.length / 1024 / 1024 * 100) / 100
       });
 
       return NextResponse.json(response);
       
     } catch (error) {
-      console.error("PPTX 수정 오류:", error);
+      console.error("PPTX 교정 적용 오류:", error);
       
       // 더 자세한 에러 분류
-      let errorMessage = "파일 수정 중 오류가 발생했습니다.";
+      let errorMessage = "파일 교정 중 오류가 발생했습니다.";
       let statusCode = 500;
       
       if (error instanceof Error) {
-        if (error.message.includes("404") || error.message.includes("Not Found")) {
-          errorMessage = "파일을 찾을 수 없습니다. 파일이 만료되었거나 서버가 재시작되었을 수 있습니다. 파일을 다시 업로드해 주세요.";
+        if (error.message.includes("파일을 찾을 수 없습니다") || error.message.includes("404")) {
+          errorMessage = "파일을 찾을 수 없습니다. 파일이 만료되었거나 삭제되었을 수 있습니다. 파일을 다시 업로드해 주세요.";
           statusCode = 404;
-        } else if (error.message.includes("parse") || error.message.includes("URL")) {
-          errorMessage = "파일 URL이 올바르지 않습니다: " + error.message;
+        } else if (error.message.includes("parse") || error.message.includes("corrupt")) {
+          errorMessage = "파일이 손상되었거나 올바른 PPTX 형식이 아닙니다: " + error.message;
           statusCode = 400;
+        } else if (error.message.includes("권한") || error.message.includes("permission")) {
+          errorMessage = "파일 접근 권한 오류가 발생했습니다.";
+          statusCode = 403;
         } else {
-          errorMessage = "파일 수정 중 오류가 발생했습니다: " + error.message;
+          errorMessage = "파일 교정 중 오류가 발생했습니다: " + error.message;
         }
       }
       
@@ -115,7 +135,7 @@ export async function POST(request: NextRequest) {
           debug: {
             originalError: error instanceof Error ? error.message : String(error),
             timestamp: new Date().toISOString(),
-            fileUrl,
+            fileId,
             fileName
           }
         },

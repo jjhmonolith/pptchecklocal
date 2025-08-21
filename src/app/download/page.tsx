@@ -173,9 +173,9 @@ export default function DownloadPage() {
                 <CardDescription>
                   {appliedCorrections}개 교정사항이 적용되었습니다. 수정된 PowerPoint 파일을 다운로드하세요.
                   {fileName && (
-                    <div className="mt-2 text-xs text-gray-500">
+                    <span className="block mt-2 text-xs text-gray-500">
                       📄 {fileName}
-                    </div>
+                    </span>
                   )}
                 </CardDescription>
               </CardHeader>

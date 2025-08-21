@@ -14,6 +14,7 @@ interface UploadedFile {
   status: 'uploading' | 'uploaded' | 'error';
   progress: number;
   url?: string;
+  fileId?: string; // 파일시스템에 저장된 파일 ID
 }
 
 export default function UploadPage() {
@@ -86,12 +87,10 @@ export default function UploadPage() {
           throw new Error('인증 토큰이 없습니다.');
         }
 
-        // 파일 크기에 따라 업로드 방식 결정
-        const useChunkUpload = ChunkUploader.needsChunking(file);
-        console.log(`파일 크기: ${(file.size / 1024 / 1024).toFixed(2)}MB, 청크 업로드: ${useChunkUpload}`);
+        // 모든 파일을 청크 업로드로 통일
+        console.log(`파일 크기: ${(file.size / 1024 / 1024).toFixed(2)}MB, 청크 업로드 사용`);
 
-        if (useChunkUpload) {
-          // 청크 업로드 사용
+        // 청크 업로드 사용
           const result = await ChunkUploader.upload({
             file,
             authToken,
@@ -114,66 +113,18 @@ export default function UploadPage() {
             throw new Error(result.error || '청크 업로드 실패');
           }
 
-          console.log('청크 업로드 완료:', result.fileUrl);
+          console.log('청크 업로드 완료, 파일 ID:', result.fileId);
 
-          // 완료 처리
+          // 완료 처리 - fileId를 저장
           setUploadedFiles(prev => 
             prev.map(f => 
               f.id === fileId 
-                ? { ...f, status: 'uploaded', progress: 100, url: result.fileUrl }
+                ? { ...f, status: 'uploaded', progress: 100, fileId: result.fileId, url: result.fileId }
                 : f
             )
           );
 
-        } else {
-          // 일반 업로드 사용 (4MB 이하)
-          const formData = new FormData();
-          formData.append('file', file);
 
-          // 진행률 업데이트
-          setUploadedFiles(prev => 
-            prev.map(f => 
-              f.id === fileId 
-                ? { ...f, progress: 30 }
-                : f
-            )
-          );
-
-          const uploadResponse = await fetch('/api/upload-blob', {
-            method: 'POST',
-            headers: {
-              'Authorization': `Bearer ${authToken}`,
-            },
-            body: formData,
-          });
-
-          setUploadedFiles(prev => 
-            prev.map(f => 
-              f.id === fileId 
-                ? { ...f, progress: 70 }
-                : f
-            )
-          );
-
-          if (!uploadResponse.ok) {
-            const errorData = await uploadResponse.json();
-            throw new Error(errorData.error || '파일 업로드 실패');
-          }
-
-          const uploadResult = await uploadResponse.json();
-          const { fileUrl } = uploadResult;
-          
-          console.log('일반 업로드 완료:', fileUrl);
-
-          // 완료 처리
-          setUploadedFiles(prev => 
-            prev.map(f => 
-              f.id === fileId 
-                ? { ...f, status: 'uploaded', progress: 100, url: fileUrl }
-                : f
-            )
-          );
-        }
 
       } catch (error) {
         console.error('Upload error:', error);
@@ -217,6 +168,13 @@ export default function UploadPage() {
       
       const analysisPromises = uploadedFilesList.map(async (file, index) => {
         console.log(`파일 ${index + 1}/${uploadedFilesList.length} 분석 중: ${file.file.name}`);
+        console.log(`파일 데이터:`, { fileId: file.fileId, url: file.url, status: file.status });
+        
+        const requestBody = {
+          fileId: file.fileId || file.url, // fileId 우선, 없으면 url (fileId가 저장된)
+          fileName: file.file.name
+        };
+        console.log(`분석 요청 데이터:`, requestBody);
         
         const response = await fetch('/api/analyze', {
           method: 'POST',
@@ -224,10 +182,7 @@ export default function UploadPage() {
             'Content-Type': 'application/json',
             'Authorization': `Bearer ${localStorage.getItem('authToken')}`,
           },
-          body: JSON.stringify({
-            fileUrl: file.url,
-            fileName: file.file.name
-          }),
+          body: JSON.stringify(requestBody),
         });
 
         if (!response.ok) {
@@ -239,7 +194,7 @@ export default function UploadPage() {
         return {
           ...result,
           fileName: file.file.name,
-          fileId: file.id
+          fileId: file.fileId || file.url // Use the actual server fileId, not the component id
         };
       });
 

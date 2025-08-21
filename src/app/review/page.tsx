@@ -7,6 +7,7 @@ import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Checkbox } from "@/components/ui/checkbox";
 import Link from "next/link";
+import DownloadModal from "@/components/download-modal";
 
 // 타입 정의
 type Suggestion = {
@@ -119,6 +120,11 @@ function ReviewContent() {
   const [filterSeverities, setFilterSeverities] = useState<string[]>(['all']);
   const [showFilters, setShowFilters] = useState(false);
   
+  // Download modal states
+  const [showDownloadModal, setShowDownloadModal] = useState(false);
+  const [downloadFileId, setDownloadFileId] = useState<string>("");
+  const [appliedCorrections, setAppliedCorrections] = useState<number>(0);
+  
   const router = useRouter();
   const searchParams = useSearchParams();
 
@@ -138,6 +144,7 @@ function ReviewContent() {
     if (savedResults) {
       try {
         const parsedResults: MultiFileAnalysisResult = JSON.parse(savedResults);
+        console.log("로드된 분석 결과:", parsedResults);
         setAnalysisResults(parsedResults);
       } catch (error) {
         console.error("다중 파일 분석 결과 파싱 오류:", error);
@@ -364,6 +371,9 @@ function ReviewContent() {
         .filter(Boolean);
 
       console.log(`${selectedCorrections.length}개 교정사항 적용 시작`);
+      console.log("currentFile:", currentFile);
+      console.log("currentFile.fileId:", currentFile.fileId);
+      console.log("currentFile.fileName:", currentFile.fileName);
 
       // 교정 적용 API 호출 (fileData 제거 - 너무 커서 413 오류 발생)
       const response = await fetch('/api/apply-corrections', {
@@ -373,7 +383,7 @@ function ReviewContent() {
           'Authorization': `Bearer ${authToken}`,
         },
         body: JSON.stringify({
-          fileUrl: `/api/file/${currentFile.fileId}`,
+          fileId: currentFile.fileId,
           fileName: currentFile.fileName,
           selectedCorrections,
         }),
@@ -398,13 +408,10 @@ function ReviewContent() {
       const result = await response.json();
       console.log('교정 적용 완료:', result);
 
-      // 다운로드 URL을 localStorage에 저장
-      localStorage.setItem('downloadUrl', result.downloadUrl);
-      localStorage.setItem('correctedFileName', result.fileName);
-      localStorage.setItem('appliedCorrections', result.appliedCorrections.toString());
-      
-      // 다운로드 페이지로 이동
-      router.push("/download");
+      // 다운로드 모달 열기
+      setDownloadFileId(result.downloadFileId);
+      setAppliedCorrections(result.appliedCorrections);
+      setShowDownloadModal(true);
       
     } catch (error) {
       console.error("Apply changes error:", error);
@@ -719,6 +726,15 @@ function ReviewContent() {
           </div>
         </div>
       </div>
+      
+      {/* Download Modal */}
+      <DownloadModal
+        isOpen={showDownloadModal}
+        onClose={() => setShowDownloadModal(false)}
+        downloadFileId={downloadFileId}
+        originalFileName={currentFile?.fileName || ""}
+        appliedCorrections={appliedCorrections}
+      />
     </div>
   );
 }

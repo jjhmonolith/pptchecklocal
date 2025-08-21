@@ -3,10 +3,12 @@
   "version": "0.1.0",
   "private": true,
   "scripts": {
-    "dev": "next dev --turbopack",
+    "dev": "PORT=3333 next dev --turbopack",
     "build": "next build --turbopack",
-    "start": "next start",
+    "start": "PORT=3333 next start",
     "lint": "eslint",
+    "setup": "node scripts/setup.js",
+    "cleanup": "node scripts/cleanup.js",
     "python:install": "cd python && pip install -r requirements.txt",
     "python:test": "cd python && python3 pptx_analyzer.py https://mock-test.example.com/test.pptx",
     "ai:test": "cd python && python3 ai_spell_checker.py '안녕 하세요. 프레젠테이숀을 시작하겠읍니다.' your-api-key-here"

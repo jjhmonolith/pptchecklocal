@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { verify } from "jsonwebtoken";
 import { PPTXParser } from "@/lib/pptx-parser";
+import { FileStorage } from "@/lib/file-storage";
 
 const JWT_SECRET = process.env.JWT_SECRET || "ppt-spell-checker-secret-key-2024-super-secure";
 
@@ -28,23 +29,55 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    const { fileUrl } = await request.json();
+    const requestBody = await request.json();
+    const { fileId, fileName } = requestBody;
+    
+    console.log("Analyze API request body:", requestBody);
+    console.log("File ID:", fileId);
+    console.log("File name:", fileName);
 
-    if (!fileUrl) {
+    if (!fileId) {
       return NextResponse.json(
-        { error: "파일 URL이 필요합니다." },
+        { error: "파일 ID가 필요합니다." },
         { status: 400 }
       );
     }
 
-    // Node.js PPTX 파서 사용 (Python 대신)
+    // 파일시스템 기반 PPTX 파서 사용
     
     try {
       console.log("=== PPTX 분석 시작 ===");
-      console.log("파일 URL:", fileUrl);
+      console.log("파일 ID:", fileId);
+      console.log("파일명:", fileName);
       
-      // 1단계: Node.js로 PPTX 텍스트 추출 (Python 대신)
-      const pptxResult = await PPTXParser.analyzeFromUrl(fileUrl);
+      // 파일 저장소 초기화
+      await FileStorage.init();
+      
+      // 파일 데이터 조회
+      const fileData = await FileStorage.get(fileId);
+      if (!fileData) {
+        return NextResponse.json(
+          { error: "파일을 찾을 수 없습니다. 파일이 만료되었거나 삭제되었을 수 있습니다." },
+          { status: 404 }
+        );
+      }
+      
+      // 파일 읽기
+      const fileBuffer = await FileStorage.readFile(fileId);
+      if (!fileBuffer) {
+        return NextResponse.json(
+          { error: "파일 읽기에 실패했습니다." },
+          { status: 500 }
+        );
+      }
+      
+      console.log("파일 읽기 완료:", {
+        filename: fileData.filename,
+        size: fileBuffer.length
+      });
+      
+      // 1단계: 파일 버퍼에서 직접 PPTX 텍스트 추출
+      const pptxResult = await PPTXParser.analyzeFromBuffer(fileBuffer, fileData.filename);
       console.log("PPTX 분석 완료:", pptxResult);
       
       // 2단계: AI 맞춤법 검사 (내부 API 호출)
@@ -137,7 +170,7 @@ export async function POST(request: NextRequest) {
         debug: {
           reason: "PPTX 분석 실패",
           parser: "Node.js JSZip",
-          fileUrl: fileUrl,
+          fileId: fileId,
           openaiKeyExists: !!process.env.OPENAI_API_KEY,
           error: error instanceof Error ? error.message : String(error)
         }
