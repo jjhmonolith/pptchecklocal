@@ -6,7 +6,9 @@
     "dev": "next dev --turbopack",
     "build": "next build --turbopack",
     "start": "next start",
-    "lint": "eslint"
+    "lint": "eslint",
+    "python:install": "cd python && pip install -r requirements.txt",
+    "python:test": "cd python && python3 pptx_analyzer.py https://mock-test.example.com/test.pptx"
   },
   "dependencies": {
     "@radix-ui/react-checkbox": "^1.3.3",

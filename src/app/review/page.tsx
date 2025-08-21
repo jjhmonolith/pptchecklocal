@@ -100,10 +100,28 @@ function ReviewContent() {
       router.push("/auth");
     }
 
-    // Mock 데이터 로드 (실제로는 API 호출)
-    setTimeout(() => {
-      setAnalyzeResult(mockAnalyzeResult);
-    }, 1000);
+    // 분석 결과 로드 (로컬 스토리지에서 또는 Mock 데이터)
+    const savedResult = localStorage.getItem("analysisResult");
+    if (savedResult) {
+      try {
+        const parsedResult = JSON.parse(savedResult);
+        // API 응답 구조에 맞게 변환
+        if (parsedResult.suggestions) {
+          setAnalyzeResult(parsedResult);
+        } else {
+          // 분석 결과가 다른 형식인 경우 Mock 데이터 사용
+          setAnalyzeResult(mockAnalyzeResult);
+        }
+      } catch (error) {
+        console.error("분석 결과 파싱 오류:", error);
+        setAnalyzeResult(mockAnalyzeResult);
+      }
+    } else {
+      // 저장된 결과가 없으면 Mock 데이터 사용
+      setTimeout(() => {
+        setAnalyzeResult(mockAnalyzeResult);
+      }, 1000);
+    }
   }, [router, searchParams]);
 
   useEffect(() => {

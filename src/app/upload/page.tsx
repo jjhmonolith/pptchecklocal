@@ -144,15 +144,34 @@ export default function UploadPage() {
     setIsProcessing(true);
     
     try {
-      // 여기서 분석 API 호출 (나중에 구현)
-      // 임시로 2초 후 리뷰 페이지로 이동
-      await new Promise(resolve => setTimeout(resolve, 2000));
+      // 분석 API 호출
+      const response = await fetch('/api/analyze', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${localStorage.getItem('authToken')}`,
+        },
+        body: JSON.stringify({
+          fileUrl: uploadedFilesList[0].url
+        }),
+      });
+
+      if (!response.ok) {
+        const errorData = await response.json();
+        throw new Error(errorData.error || '분석 요청 실패');
+      }
+
+      const result = await response.json();
+      console.log('Analysis result:', result);
       
-      // 첫 번째 파일 URL을 쿼리로 전달
-      router.push(`/review?fileUrl=${encodeURIComponent(uploadedFilesList[0].url || '')}`);
+      // 분석 결과를 로컬 스토리지에 저장 (리뷰 페이지에서 사용)
+      localStorage.setItem('analysisResult', JSON.stringify(result));
+      
+      // 리뷰 페이지로 이동
+      router.push('/review');
     } catch (error) {
       console.error('Analysis error:', error);
-      alert("분석 중 오류가 발생했습니다.");
+      alert(`분석 중 오류가 발생했습니다: ${error instanceof Error ? error.message : '알 수 없는 오류'}`);
     } finally {
       setIsProcessing(false);
     }
