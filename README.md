@@ -1,36 +1,69 @@
-This is a [Next.js](https://nextjs.org) project bootstrapped with [`create-next-app`](https://nextjs.org/docs/app/api-reference/cli/create-next-app).
+# PPT 맞춤법 검사기
 
-## Getting Started
+PowerPoint 교재를 자동으로 교정하는 AI 기반 웹 애플리케이션
 
-First, run the development server:
+## 🚀 기능
+
+- 🔐 패스워드 기반 보안 인증
+- 📄 PowerPoint(.pptx) 파일 업로드
+- 🤖 AI 기반 맞춤법 검사 
+- ✏️ 사용자가 수정할 오류를 검토하고 선택
+- 📥 ppt를 자동으로 시스템이 수정하고, 수정된 파일 자동 다운로드
+
+## 🛠 기술 스택
+
+- **Frontend**: Next.js (App Router) + TypeScript, Tailwind CSS, shadcn/ui
+- **Backend**: Next.js API Routes
+- **AI**: Anthropic Claude API
+- **Storage**: Vercel Blob
+- **Database**: Vercel Postgres
+- **Deployment**: Vercel
+
+## 📦 설치 및 실행
 
 ```bash
+# 의존성 설치
+npm install
+
+# 개발 서버 실행
 npm run dev
-# or
-yarn dev
-# or
-pnpm dev
-# or
-bun dev
 ```
 
-Open [http://localhost:3000](http://localhost:3000) with your browser to see the result.
+개발 서버는 [http://localhost:3000](http://localhost:3000)에서 실행됩니다.
 
-You can start editing the page by modifying `app/page.tsx`. The page auto-updates as you edit the file.
+## 🌟 사용 방법
 
-This project uses [`next/font`](https://nextjs.org/docs/app/building-your-application/optimizing/fonts) to automatically optimize and load [Geist](https://vercel.com/font), a new font family for Vercel.
+1. **로그인**: 패스워드를 입력하여 인증
+2. **업로드**: PowerPoint 파일 업로드
+3. **검토**: AI가 제안한 교정 사항 검토 및 선택
+4. **다운로드**: 교정된 파일 자동 다운로드
 
-## Learn More
+## 📝 환경 변수
 
-To learn more about Next.js, take a look at the following resources:
+`.env.local` 파일에 다음 환경 변수를 설정하세요:
 
-- [Next.js Documentation](https://nextjs.org/docs) - learn about Next.js features and API.
-- [Learn Next.js](https://nextjs.org/learn) - an interactive Next.js tutorial.
+```
+# 인증
+AUTH_PASSWORD=your-password
 
-You can check out [the Next.js GitHub repository](https://github.com/vercel/next.js) - your feedback and contributions are welcome!
+# AI
+ANTHROPIC_API_KEY=your-anthropic-api-key
 
-## Deploy on Vercel
+# Storage
+BLOB_READ_WRITE_TOKEN=your-vercel-blob-token
 
-The easiest way to deploy your Next.js app is to use the [Vercel Platform](https://vercel.com/new?utm_medium=default-template&filter=next.js&utm_source=create-next-app&utm_campaign=create-next-app-readme) from the creators of Next.js.
+# Database
+POSTGRES_URL=your-postgres-url
+```
 
-Check out our [Next.js deployment documentation](https://nextjs.org/docs/app/building-your-application/deploying) for more details.
+## 🚀 배포
+
+Vercel에 자동 배포됩니다:
+
+```bash
+vercel
+```
+
+## 📄 라이센스
+
+MIT
