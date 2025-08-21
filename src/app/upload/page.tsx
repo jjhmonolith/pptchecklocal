@@ -77,7 +77,7 @@ export default function UploadPage() {
           )
         );
 
-        const uploadResponse = await fetch('/api/upload-file', {
+        const uploadResponse = await fetch('/api/upload-blob', {
           method: 'POST',
           headers: {
             'Authorization': `Bearer ${localStorage.getItem('authToken')}`,
@@ -130,7 +130,7 @@ export default function UploadPage() {
       'application/vnd.openxmlformats-officedocument.presentationml.presentation': ['.pptx']
     },
     multiple: true,
-    maxSize: 50 * 1024 * 1024, // 50MB (클라이언트 직접 업로드)
+    maxSize: 25 * 1024 * 1024, // 25MB
   });
 
   const removeFile = (id: string) => {
@@ -248,7 +248,7 @@ export default function UploadPage() {
                 </span>
               </CardTitle>
               <CardDescription>
-                .pptx 파일을 드래그 앤 드롭하거나 클릭하여 업로드하세요. (최대 50MB)
+                .pptx 파일을 드래그 앤 드롭하거나 클릭하여 업로드하세요. (최대 25MB)
               </CardDescription>
             </CardHeader>
             
@@ -283,7 +283,7 @@ export default function UploadPage() {
                         PowerPoint 파일을 드래그하거나 클릭하여 업로드
                       </p>
                       <p className="text-sm text-gray-500">
-                        .pptx 형식만 지원 • 최대 50MB • 여러 파일 업로드 가능
+                        .pptx 형식만 지원 • 최대 25MB • 여러 파일 업로드 가능
                       </p>
                     </div>
                   )}
@@ -376,7 +376,7 @@ export default function UploadPage() {
                 <h3 className="font-semibold text-gray-800 mb-2">💡 사용 팁</h3>
                 <div className="text-sm text-gray-600 space-y-1">
                   <p>• PowerPoint(.pptx) 파일만 업로드 가능합니다</p>
-                  <p>• 파일 크기는 최대 50MB까지 지원됩니다</p>
+                  <p>• 파일 크기는 최대 25MB까지 지원됩니다</p>
                   <p>• 여러 파일을 동시에 업로드할 수 있습니다</p>
                   <p>• 업로드 완료 후 &quot;맞춤법 검사 시작&quot;을 클릭하세요</p>
                 </div>
