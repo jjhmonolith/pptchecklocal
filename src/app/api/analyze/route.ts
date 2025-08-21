@@ -42,6 +42,10 @@ export async function POST(request: NextRequest) {
     const pythonScriptPath = path.join(process.cwd(), "python", "pptx_analyzer.py");
     
     try {
+      console.log("=== PPTX 분석 시작 ===");
+      console.log("Python 스크립트 경로:", pythonScriptPath);
+      console.log("파일 URL:", fileUrl);
+      
       // Python 스크립트 실행 (실제로는 Python 환경이 필요)
       // 1단계: PPTX 텍스트 추출
       const pptxResult = await runPythonScript(pythonScriptPath, fileUrl);
@@ -49,6 +53,10 @@ export async function POST(request: NextRequest) {
       
       // 2단계: AI 맞춤법 검사 (내부 API 호출)
       try {
+        console.log("=== AI 분석 시작 ===");
+        console.log("OpenAI API 키 존재:", !!process.env.OPENAI_API_KEY);
+        console.log("API URL:", `${process.env.NEXTJS_URL || 'http://localhost:3000'}/api/ai-analyze`);
+        
         const aiResponse = await fetch(`${process.env.NEXTJS_URL || 'http://localhost:3000'}/api/ai-analyze`, {
           method: 'POST',
           headers: {
@@ -59,6 +67,8 @@ export async function POST(request: NextRequest) {
             pptxData: pptxResult
           }),
         });
+
+        console.log("AI API 응답 상태:", aiResponse.status);
 
         if (aiResponse.ok) {
           const aiResult = await aiResponse.json();
@@ -72,9 +82,11 @@ export async function POST(request: NextRequest) {
             message: "PPTX 분석 및 AI 맞춤법 검사가 완료되었습니다."
           });
         } else {
+          const errorText = await aiResponse.text();
+          console.log("AI 분석 실패 응답:", errorText);
           console.log("AI 분석 실패, PPTX 결과만 반환");
           // AI 분석 실패 시에도 PPTX 구조 분석 결과는 반환
-          throw new Error("AI 분석 실패");
+          throw new Error(`AI 분석 실패: ${aiResponse.status} ${errorText}`);
         }
       } catch (aiError) {
         console.error("AI 분석 오류:", aiError);
@@ -82,7 +94,7 @@ export async function POST(request: NextRequest) {
         const mockResult = generateMockAnalysis(pptxResult);
         return NextResponse.json({
           success: true,
-          message: "분석이 완료되었습니다 (AI 없음, Mock 데이터 사용).",
+          message: "분석이 완료되었습니다 (AI 오류, Mock 데이터 사용).",
           ...mockResult
         });
       }
