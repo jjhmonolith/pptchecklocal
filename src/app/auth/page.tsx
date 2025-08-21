@@ -42,9 +42,15 @@ export default function AuthPage() {
       console.log("Auth response:", { status: response.status, data });
 
       if (response.ok) {
+        console.log("✅ Auth successful, token:", data.token);
         localStorage.setItem("authToken", data.token);
-        console.log("Token saved, redirecting to /upload");
-        router.push("/upload");
+        console.log("✅ Token saved to localStorage");
+        
+        // 강제로 window.location 사용해보기
+        setTimeout(() => {
+          console.log("🔄 Redirecting to /upload");
+          window.location.href = "/upload";
+        }, 100);
       } else {
         console.log("Auth failed:", data);
         setError(data.error || "인증에 실패했습니다.");
@@ -142,7 +148,7 @@ export default function AuthPage() {
                   {isLoading ? (
                     <div className="flex items-center gap-2">
                       <div className="w-4 h-4 border-2 border-white/30 border-t-white rounded-full animate-spin" />
-                      인증 중...
+                      {password === "ppt-checker-2024" ? "인증 성공! 페이지 이동 중..." : "인증 중..."}
                     </div>
                   ) : (
                     <div className="flex items-center gap-2">
