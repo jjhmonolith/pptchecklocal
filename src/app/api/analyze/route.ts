@@ -1,7 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { verify } from "jsonwebtoken";
-import { spawn } from "child_process";
-import path from "path";
+import { PPTXParser } from "@/lib/pptx-parser";
 
 const JWT_SECRET = process.env.JWT_SECRET || "ppt-spell-checker-secret-key-2024-super-secure";
 
@@ -38,17 +37,14 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    // Python 스크립트 실행을 위한 준비
-    const pythonScriptPath = path.join(process.cwd(), "python", "pptx_analyzer.py");
+    // Node.js PPTX 파서 사용 (Python 대신)
     
     try {
       console.log("=== PPTX 분석 시작 ===");
-      console.log("Python 스크립트 경로:", pythonScriptPath);
       console.log("파일 URL:", fileUrl);
       
-      // Python 스크립트 실행 (실제로는 Python 환경이 필요)
-      // 1단계: PPTX 텍스트 추출
-      const pptxResult = await runPythonScript(pythonScriptPath, fileUrl);
+      // 1단계: Node.js로 PPTX 텍스트 추출 (Python 대신)
+      const pptxResult = await PPTXParser.analyzeFromUrl(fileUrl);
       console.log("PPTX 분석 완료:", pptxResult);
       
       // 2단계: AI 맞춤법 검사 (내부 API 호출)
@@ -163,53 +159,7 @@ export async function POST(request: NextRequest) {
   }
 }
 
-function runPythonScript(scriptPath: string, fileUrl: string): Promise<{
-  slides: Array<{
-    slideIndex: number;
-    shapes: Array<{
-      shapeId: string;
-      textRuns: Array<{ text: string }>;
-    }>;
-  }>;
-  stats: {
-    slides: number;
-    shapes: number;
-    runs: number;
-    tokensEstimated: number;
-  };
-}> {
-  return new Promise((resolve, reject) => {
-    const python = spawn('python3', [scriptPath, fileUrl]);
-    
-    let stdout = '';
-    let stderr = '';
-
-    python.stdout.on('data', (data) => {
-      stdout += data.toString();
-    });
-
-    python.stderr.on('data', (data) => {
-      stderr += data.toString();
-    });
-
-    python.on('close', (code) => {
-      if (code !== 0) {
-        reject(new Error(`Python script exited with code ${code}: ${stderr}`));
-      } else {
-        try {
-          const result = JSON.parse(stdout);
-          resolve(result);
-        } catch (error) {
-          reject(new Error(`Failed to parse Python output: ${error}`));
-        }
-      }
-    });
-
-    python.on('error', (error) => {
-      reject(error);
-    });
-  });
-}
+// Python 스크립트 함수는 더 이상 사용하지 않음 (Node.js PPTX 파서 사용)
 
 function generateMockAnalysis(pptxResult: { stats?: { slides: number; shapes: number; runs: number; tokensEstimated: number } } | null) {
   /**
