@@ -27,7 +27,7 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    const { filename, contentType } = await request.json();
+    const { filename } = await request.json();
 
     if (!filename) {
       return NextResponse.json(

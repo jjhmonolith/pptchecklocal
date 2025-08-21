@@ -144,7 +144,21 @@ export async function POST(request: NextRequest) {
   }
 }
 
-function runPythonScript(scriptPath: string, fileUrl: string): Promise<any> {
+function runPythonScript(scriptPath: string, fileUrl: string): Promise<{
+  slides: Array<{
+    slideIndex: number;
+    shapes: Array<{
+      shapeId: string;
+      textRuns: Array<{ text: string }>;
+    }>;
+  }>;
+  stats: {
+    slides: number;
+    shapes: number;
+    runs: number;
+    tokensEstimated: number;
+  };
+}> {
   return new Promise((resolve, reject) => {
     const python = spawn('python3', [scriptPath, fileUrl]);
     
@@ -178,7 +192,7 @@ function runPythonScript(scriptPath: string, fileUrl: string): Promise<any> {
   });
 }
 
-function generateMockAnalysis(pptxResult: any) {
+function generateMockAnalysis(pptxResult: { stats?: { slides: number; shapes: number; runs: number; tokensEstimated: number } } | null) {
   /**
    * PPTX 분석 결과를 기반으로 Mock AI 분석 결과 생성
    */

@@ -93,7 +93,25 @@ export async function POST(request: NextRequest) {
   }
 }
 
-function runAIScript(scriptPath: string, inputData: string, apiKey: string, mode: string = 'text'): Promise<any> {
+function runAIScript(scriptPath: string, inputData: string, apiKey: string, mode: string = 'text'): Promise<{
+  jobId: string;
+  suggestions: Array<{
+    slideIndex: number;
+    shapeId: string;
+    runPath: number[];
+    original: string;
+    revised: string;
+    type: string;
+    reason: string;
+    severity: string;
+  }>;
+  stats: {
+    slides: number;
+    shapes: number;
+    runs: number;
+    tokensEstimated: number;
+  };
+}> {
   return new Promise((resolve, reject) => {
     const args = mode === 'pptx' 
       ? [scriptPath, '--pptx-data', inputData, '--api-key', apiKey]
@@ -131,7 +149,13 @@ function runAIScript(scriptPath: string, inputData: string, apiKey: string, mode
   });
 }
 
-function generateMockAIAnalysis(pptxData: any) {
+function generateMockAIAnalysis(pptxData: {
+  slides?: Array<{
+    shapes?: Array<{
+      textRuns?: Array<unknown>;
+    }>;
+  }>;
+}) {
   /**
    * Mock AI 분석 결과 생성
    * 실제 AI가 없을 때 사용할 샘플 데이터
@@ -191,10 +215,10 @@ function generateMockAIAnalysis(pptxData: any) {
   ];
 
   const slideCount = pptxData?.slides?.length || 3;
-  const shapeCount = pptxData?.slides?.reduce((total: number, slide: any) => 
+  const shapeCount = pptxData?.slides?.reduce((total: number, slide) => 
     total + (slide.shapes?.length || 0), 0) || 5;
-  const runCount = pptxData?.slides?.reduce((total: number, slide: any) => 
-    total + (slide.shapes?.reduce((shapeTotal: number, shape: any) => 
+  const runCount = pptxData?.slides?.reduce((total: number, slide) => 
+    total + (slide.shapes?.reduce((shapeTotal: number, shape) => 
       shapeTotal + (shape.textRuns?.length || 0), 0) || 0), 0) || 8;
 
   return {
