@@ -161,12 +161,7 @@ export default function UploadPage() {
           }
 
           const uploadResult = await uploadResponse.json();
-          const { fileUrl, fileData } = uploadResult;
-          
-          // localStorage에 파일 데이터 저장
-          if (fileData) {
-            localStorage.setItem(`file_${fileId}`, fileData);
-          }
+          const { fileUrl } = uploadResult;
           
           console.log('일반 업로드 완료:', fileUrl);
 
