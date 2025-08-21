@@ -33,39 +33,29 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    const { fileUrl, fileName, selectedCorrections, fileData } = await request.json();
+    const { fileUrl, fileName, selectedCorrections } = await request.json();
 
-    if ((!fileUrl && !fileData) || !selectedCorrections) {
+    if (!fileUrl || !selectedCorrections) {
       return NextResponse.json(
-        { error: "파일 URL 또는 파일 데이터와 교정 사항이 필요합니다." },
+        { error: "파일 URL과 교정 사항이 필요합니다." },
         { status: 400 }
       );
     }
 
     console.log("교정 적용 시작:", {
       fileName,
-      correctionsCount: selectedCorrections.length,
-      hasFileData: !!fileData
+      correctionsCount: selectedCorrections.length
     });
 
     try {
-      let modifiedBuffer: ArrayBuffer;
+      // URL에서 파일 다운로드
+      const origin = request.headers.get('origin') || 
+                     request.headers.get('referer')?.split('/').slice(0, 3).join('/') ||
+                     'http://localhost:3000';
+      const fullFileUrl = fileUrl.startsWith('http') ? fileUrl : `${origin}${fileUrl}`;
       
-      if (fileData) {
-        // Base64 데이터에서 직접 처리
-        console.log("Base64 데이터에서 직접 파일 처리");
-        const buffer = Buffer.from(fileData, 'base64');
-        modifiedBuffer = await PPTXModifier.applyCorrectionsFromBuffer(buffer, selectedCorrections);
-      } else {
-        // URL에서 파일 다운로드
-        const origin = request.headers.get('origin') || 
-                       request.headers.get('referer')?.split('/').slice(0, 3).join('/') ||
-                       'http://localhost:3000';
-        const fullFileUrl = fileUrl.startsWith('http') ? fileUrl : `${origin}${fileUrl}`;
-        
-        console.log("파일 URL 변환:", { fileUrl, fullFileUrl });
-        modifiedBuffer = await PPTXModifier.applyCorrections(fullFileUrl, selectedCorrections, token);
-      }
+      console.log("파일 URL 변환:", { fileUrl, fullFileUrl });
+      const modifiedBuffer = await PPTXModifier.applyCorrections(fullFileUrl, selectedCorrections, token);
       
       // 임시 파일명 생성
       const timestamp = Date.now();

@@ -365,11 +365,7 @@ function ReviewContent() {
 
       console.log(`${selectedCorrections.length}개 교정사항 적용 시작`);
 
-      // localStorage에서 파일 데이터 가져오기
-      const fileDataKey = `file_${currentFile.fileId}`;
-      const storedFileData = localStorage.getItem(fileDataKey);
-      
-      // 교정 적용 API 호출
+      // 교정 적용 API 호출 (fileData 제거 - 너무 커서 413 오류 발생)
       const response = await fetch('/api/apply-corrections', {
         method: 'POST',
         headers: {
@@ -377,10 +373,9 @@ function ReviewContent() {
           'Authorization': `Bearer ${authToken}`,
         },
         body: JSON.stringify({
-          fileUrl: `/api/file/${currentFile.fileId}`, // 폴백 URL
+          fileUrl: `/api/file/${currentFile.fileId}`,
           fileName: currentFile.fileName,
           selectedCorrections,
-          fileData: storedFileData, // Base64 파일 데이터 직접 전송
         }),
       });
 

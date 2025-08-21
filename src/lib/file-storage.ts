@@ -12,33 +12,49 @@ interface FileData {
   uploadedAt: string;
 }
 
-// 메모리 저장소 (서버 재시작시 초기화됨)
-const fileStorage = new Map<string, FileData>();
+// 전역 변수로 메모리 저장소 관리 (서버 재시작시 초기화됨)
+declare global {
+  var __fileStorage: Map<string, FileData> | undefined;
+}
+
+// 전역 저장소 초기화
+if (!global.__fileStorage) {
+  global.__fileStorage = new Map<string, FileData>();
+}
 
 export const FileStorage = {
   // 파일 저장
   store: (fileData: FileData): void => {
-    fileStorage.set(fileData.id, fileData);
+    const storage = global.__fileStorage!;
+    storage.set(fileData.id, fileData);
+    console.log(`파일 저장됨: ${fileData.filename}, 현재 저장된 파일 수: ${storage.size}`);
     
     // 1시간 후 자동 삭제 (메모리 절약)
     setTimeout(() => {
-      fileStorage.delete(fileData.id);
-      console.log(`임시 파일 삭제됨: ${fileData.filename}`);
+      storage.delete(fileData.id);
+      console.log(`임시 파일 삭제됨: ${fileData.filename}, 남은 파일 수: ${storage.size}`);
     }, 60 * 60 * 1000); // 1시간
   },
 
   // 파일 조회
   get: (fileId: string): FileData | undefined => {
-    return fileStorage.get(fileId);
+    const storage = global.__fileStorage!;
+    const fileData = storage.get(fileId);
+    console.log(`파일 조회: ${fileId}, 찾음: ${!!fileData}, 저장된 파일 수: ${storage.size}`);
+    return fileData;
   },
 
   // 파일 삭제
   delete: (fileId: string): boolean => {
-    return fileStorage.delete(fileId);
+    const storage = global.__fileStorage!;
+    const result = storage.delete(fileId);
+    console.log(`파일 삭제: ${fileId}, 성공: ${result}, 남은 파일 수: ${storage.size}`);
+    return result;
   },
 
   // 저장된 파일 개수 조회 (디버깅용)
   size: (): number => {
-    return fileStorage.size;
+    const storage = global.__fileStorage!;
+    return storage.size;
   }
 };
