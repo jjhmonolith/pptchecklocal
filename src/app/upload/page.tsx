@@ -64,41 +64,45 @@ export default function UploadPage() {
       setUploadedFiles(prev => [...prev, newFile]);
 
       try {
-        // 1단계: 업로드 URL 요청
-        const urlResponse = await fetch('/api/upload-url', {
-          method: 'POST',
-          headers: {
-            'Content-Type': 'application/json',
-            'Authorization': `Bearer ${localStorage.getItem('authToken')}`,
-          },
-          body: JSON.stringify({
-            filename: file.name,
-            contentType: file.type
-          }),
-        });
+        // FormData로 실제 파일 업로드
+        const formData = new FormData();
+        formData.append('file', file);
 
-        if (!urlResponse.ok) {
-          const errorData = await urlResponse.json();
-          throw new Error(errorData.error || 'URL 생성 실패');
-        }
-
-        const { uploadUrl, fileUrl } = await urlResponse.json();
-
-        // 임시로 성공 처리 (실제로는 uploadUrl로 파일 업로드)
-        console.log('Mock upload to:', uploadUrl);
-        
-        // 업로드 진행률 시뮬레이션
+        // 업로드 진행률 시뮬레이션 시작
         setUploadedFiles(prev => 
           prev.map(f => 
             f.id === fileId 
-              ? { ...f, progress: 50 }
+              ? { ...f, progress: 20 }
               : f
           )
         );
 
-        // 약간의 지연 후 완료 처리
-        await new Promise(resolve => setTimeout(resolve, 1000));
+        const uploadResponse = await fetch('/api/upload-file', {
+          method: 'POST',
+          headers: {
+            'Authorization': `Bearer ${localStorage.getItem('authToken')}`,
+          },
+          body: formData,
+        });
 
+        // 진행률 업데이트
+        setUploadedFiles(prev => 
+          prev.map(f => 
+            f.id === fileId 
+              ? { ...f, progress: 70 }
+              : f
+          )
+        );
+
+        if (!uploadResponse.ok) {
+          const errorData = await uploadResponse.json();
+          throw new Error(errorData.error || '파일 업로드 실패');
+        }
+
+        const { fileUrl } = await uploadResponse.json();
+        console.log('파일 업로드 완료:', fileUrl);
+
+        // 완료 처리
         setUploadedFiles(prev => 
           prev.map(f => 
             f.id === fileId 
