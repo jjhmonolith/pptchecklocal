@@ -53,6 +53,10 @@ export async function POST(request: NextRequest) {
 
     try {
       console.log("OpenAI API 직접 호출 시작");
+      console.log("받은 pptxData:", pptxData ? {
+        slides: pptxData.slides?.length || 0,
+        stats: pptxData.stats
+      } : null);
       
       // 텍스트 청크 단위로 나누어 병렬 처리
       const chunks = await prepareTextChunks(pptxData, text);
@@ -90,10 +94,27 @@ export async function POST(request: NextRequest) {
         })) || []
       );
 
+      // 실제 통계 계산 (pptxData가 있으면 우선 사용)
+      let finalStats;
+      if (pptxData?.stats) {
+        finalStats = pptxData.stats;
+        console.log("PPTX 통계 사용:", finalStats);
+      } else {
+        // fallback: 청크 기반 추정
+        const estimatedStats = {
+          slides: text ? 1 : Math.max(1, [...new Set(chunks.map(c => c.slideIndex))].length),
+          shapes: chunks.length,
+          runs: chunks.length,
+          tokensEstimated: chunks.reduce((sum, chunk) => sum + chunk.text.length, 0)
+        };
+        finalStats = estimatedStats;
+        console.log("추정 통계 사용:", estimatedStats);
+      }
+
       const result = {
         jobId: `ai-job-${Date.now()}`,
         suggestions: allSuggestions,
-        stats: pptxData?.stats || { slides: chunks.length, shapes: chunks.length, runs: chunks.length, tokensEstimated: chunks.reduce((sum, chunk) => sum + chunk.text.length, 0) }
+        stats: finalStats
       };
       
       console.log("AI 분석 완료, 제안 개수:", allSuggestions.length);
@@ -143,10 +164,12 @@ async function prepareTextChunks(pptxData: {
   const chunks: TextChunk[] = [];
   
   if (pptxData && pptxData.slides) {
-    // 슬라이드 단위로 청크 생성
+    // 슬라이드별로 청크 생성 (모든 셰이프 텍스트를 하나로 합침)
     pptxData.slides.forEach((slide, slideIndex: number) => {
       if (slide.shapes) {
-        slide.shapes.forEach((shape, shapeIndex: number) => {
+        const slideTexts: string[] = [];
+        
+        slide.shapes.forEach((shape) => {
           if (shape.textRuns && shape.textRuns.length > 0) {
             const shapeText = shape.textRuns
               .map((run) => run.text)
@@ -154,15 +177,21 @@ async function prepareTextChunks(pptxData: {
               .trim();
               
             if (shapeText) {
-              chunks.push({
-                text: shapeText,
-                slideIndex: slideIndex + 1,
-                shapeId: shape.shapeId || `shape-${slideIndex + 1}-${shapeIndex + 1}`,
-                runPath: [slideIndex, shapeIndex]
-              });
+              slideTexts.push(shapeText);
             }
           }
         });
+        
+        // 슬라이드의 모든 텍스트를 하나로 합치기
+        if (slideTexts.length > 0) {
+          const slideText = slideTexts.join('\n\n').trim();
+          chunks.push({
+            text: slideText,
+            slideIndex: slideIndex + 1,
+            shapeId: `slide-${slideIndex + 1}`,
+            runPath: [slideIndex, 0]
+          });
+        }
       }
     });
   } else if (text) {
