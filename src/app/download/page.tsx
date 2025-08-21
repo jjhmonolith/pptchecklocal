@@ -10,6 +10,8 @@ import Link from "next/link";
 export default function DownloadPage() {
   const [isAuthenticated, setIsAuthenticated] = useState(false);
   const [downloadUrl, setDownloadUrl] = useState<string | null>(null);
+  const [fileName, setFileName] = useState<string>("");
+  const [appliedCorrections, setAppliedCorrections] = useState<number>(0);
   const [isGenerating, setIsGenerating] = useState(true);
   const [mousePosition, setMousePosition] = useState({ x: 0, y: 0 });
   const router = useRouter();
@@ -22,11 +24,22 @@ export default function DownloadPage() {
       router.push("/auth");
     }
 
-    // Mock 다운로드 URL 생성 (실제로는 서버에서 생성)
-    setTimeout(() => {
-      setDownloadUrl("https://mock-download.example.com/corrected-presentation.pptx");
+    // localStorage에서 다운로드 정보 가져오기
+    const savedDownloadUrl = localStorage.getItem("downloadUrl");
+    const savedFileName = localStorage.getItem("correctedFileName");
+    const savedCorrections = localStorage.getItem("appliedCorrections");
+
+    if (savedDownloadUrl && savedFileName) {
+      setDownloadUrl(savedDownloadUrl);
+      setFileName(savedFileName);
+      setAppliedCorrections(parseInt(savedCorrections || "0"));
       setIsGenerating(false);
-    }, 3000);
+    } else {
+      // 교정 정보가 없으면 업로드 페이지로 리디렉션
+      setTimeout(() => {
+        router.push("/upload");
+      }, 2000);
+    }
   }, [router]);
 
   useEffect(() => {
@@ -42,10 +55,29 @@ export default function DownloadPage() {
     router.push("/");
   };
 
-  const handleDownload = () => {
-    if (downloadUrl) {
-      // Mock 다운로드 (실제로는 파일 다운로드)
-      window.open(downloadUrl, '_blank');
+  const handleDownload = async () => {
+    if (!downloadUrl) return;
+    
+    try {
+      const authToken = localStorage.getItem('authToken');
+      if (!authToken) {
+        alert("인증이 필요합니다.");
+        return;
+      }
+
+      // 다운로드 링크 생성
+      const downloadLink = document.createElement('a');
+      downloadLink.href = `${downloadUrl}?token=${encodeURIComponent(authToken)}`;
+      downloadLink.download = fileName || 'corrected-presentation.pptx';
+      document.body.appendChild(downloadLink);
+      downloadLink.click();
+      document.body.removeChild(downloadLink);
+      
+      console.log(`파일 다운로드 시작: ${fileName}`);
+      
+    } catch (error) {
+      console.error('다운로드 오류:', error);
+      alert('파일 다운로드 중 오류가 발생했습니다.');
     }
   };
 
@@ -139,7 +171,12 @@ export default function DownloadPage() {
                   교정 완료! 🎉
                 </CardTitle>
                 <CardDescription>
-                  맞춤법 교정이 완료되었습니다. 수정된 PowerPoint 파일을 다운로드하세요.
+                  {appliedCorrections}개 교정사항이 적용되었습니다. 수정된 PowerPoint 파일을 다운로드하세요.
+                  {fileName && (
+                    <div className="mt-2 text-xs text-gray-500">
+                      📄 {fileName}
+                    </div>
+                  )}
                 </CardDescription>
               </CardHeader>
               <CardContent className="space-y-6">

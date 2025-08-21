@@ -344,17 +344,60 @@ function ReviewContent() {
   };
 
   const handleApplyChanges = async () => {
+    if (!currentFile || selectedSuggestions.length === 0) {
+      alert("선택된 교정 사항이 없습니다.");
+      return;
+    }
+    
     setIsApplying(true);
     
     try {
-      // 선택된 제안사항들을 적용하는 API 호출 (나중에 구현)
-      await new Promise(resolve => setTimeout(resolve, 3000));
+      const authToken = localStorage.getItem('authToken');
+      if (!authToken) {
+        alert("인증이 필요합니다.");
+        return;
+      }
+
+      // 선택된 교정사항들 가져오기
+      const selectedCorrections = selectedSuggestions
+        .map(index => currentFile.suggestions[parseInt(index)])
+        .filter(Boolean);
+
+      console.log(`${selectedCorrections.length}개 교정사항 적용 시작`);
+
+      // 교정 적용 API 호출
+      const response = await fetch('/api/apply-corrections', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${authToken}`,
+        },
+        body: JSON.stringify({
+          fileUrl: '/api/mock-file-url', // 실제로는 업로드된 파일 URL 사용
+          fileName: currentFile.fileName,
+          selectedCorrections,
+        }),
+      });
+
+      if (!response.ok) {
+        const errorData = await response.json();
+        throw new Error(errorData.error || '교정 적용 실패');
+      }
+
+      const result = await response.json();
+      console.log('교정 적용 완료:', result);
+
+      // 다운로드 URL을 localStorage에 저장
+      localStorage.setItem('downloadUrl', result.downloadUrl);
+      localStorage.setItem('correctedFileName', result.fileName);
+      localStorage.setItem('appliedCorrections', result.appliedCorrections.toString());
       
       // 다운로드 페이지로 이동
       router.push("/download");
+      
     } catch (error) {
       console.error("Apply changes error:", error);
-      alert("변경사항 적용 중 오류가 발생했습니다.");
+      alert(`변경사항 적용 중 오류가 발생했습니다: ${error instanceof Error ? error.message : '알 수 없는 오류'}`);
     } finally {
       setIsApplying(false);
     }
