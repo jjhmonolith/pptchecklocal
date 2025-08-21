@@ -21,12 +21,17 @@ export class PPTXModifier {
   /**
    * URL에서 PPTX 파일을 다운로드하고 교정사항을 적용하여 새 파일 생성
    */
-  static async applyCorrections(fileUrl: string, corrections: Correction[]): Promise<ArrayBuffer> {
+  static async applyCorrections(fileUrl: string, corrections: Correction[], authToken?: string): Promise<ArrayBuffer> {
     console.log('PPTX 파일 다운로드 시작:', fileUrl);
     
     try {
-      // 파일 다운로드
-      const response = await fetch(fileUrl);
+      // 파일 다운로드 (인증 헤더 포함)
+      const headers: HeadersInit = {};
+      if (authToken) {
+        headers['Authorization'] = `Bearer ${authToken}`;
+      }
+      
+      const response = await fetch(fileUrl, { headers });
       if (!response.ok) {
         throw new Error(`파일 다운로드 실패: ${response.status} ${response.statusText}`);
       }

@@ -1,5 +1,8 @@
 import { NextRequest, NextResponse } from "next/server";
 import { FileStorage } from "@/lib/file-storage";
+import { verify } from "jsonwebtoken";
+
+const JWT_SECRET = process.env.JWT_SECRET || "ppt-spell-checker-secret-key-2024-super-secure";
 
 export async function GET(
   request: NextRequest,
@@ -7,6 +10,26 @@ export async function GET(
 ) {
   try {
     const { id } = await params;
+    
+    // 인증 확인
+    const authHeader = request.headers.get("authorization");
+    const token = authHeader?.replace("Bearer ", "") || request.cookies.get("auth-token")?.value;
+
+    if (!token) {
+      return NextResponse.json(
+        { error: "인증이 필요합니다." },
+        { status: 401 }
+      );
+    }
+
+    try {
+      verify(token, JWT_SECRET);
+    } catch {
+      return NextResponse.json(
+        { error: "유효하지 않은 토큰입니다." },
+        { status: 401 }
+      );
+    }
     
     const fileData = FileStorage.get(id);
     

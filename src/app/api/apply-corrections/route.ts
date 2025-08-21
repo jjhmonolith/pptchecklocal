@@ -48,8 +48,16 @@ export async function POST(request: NextRequest) {
     });
 
     try {
-      // 실제 PPTX 파일 수정
-      const modifiedBuffer = await PPTXModifier.applyCorrections(fileUrl, selectedCorrections);
+      // 전체 URL 생성 (상대 경로를 절대 경로로 변환)
+      const origin = request.headers.get('origin') || 
+                     request.headers.get('referer')?.split('/').slice(0, 3).join('/') ||
+                     'http://localhost:3000';
+      const fullFileUrl = fileUrl.startsWith('http') ? fileUrl : `${origin}${fileUrl}`;
+      
+      console.log("파일 URL 변환:", { fileUrl, fullFileUrl });
+      
+      // 실제 PPTX 파일 수정 (토큰 전달)
+      const modifiedBuffer = await PPTXModifier.applyCorrections(fullFileUrl, selectedCorrections, token);
       
       // 임시 파일명 생성
       const timestamp = Date.now();
