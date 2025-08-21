@@ -51,24 +51,34 @@ export default function UploadPage() {
       return;
     }
 
-    // 한 번에 하나의 파일만 처리
-    if (pptxFiles.length > 1) {
-      alert("한 번에 하나의 파일만 업로드할 수 있습니다. 첫 번째 파일만 처리합니다.");
+    // 최대 5개 파일까지 처리
+    if (pptxFiles.length > 5) {
+      alert("최대 5개의 파일까지만 업로드할 수 있습니다. 처음 5개 파일만 처리합니다.");
+      pptxFiles.splice(5);
     }
 
-    // 첫 번째 파일만 사용
-    const file = pptxFiles[0];
-    const fileId = Date.now() + Math.random().toString(36);
+    // 현재 업로드된 파일과 합쳐서 5개를 초과하면 제한
+    const currentCount = uploadedFiles.length;
+    const availableSlots = 5 - currentCount;
     
-    // 파일 추가
-    const newFile: UploadedFile = {
-      file,
-      id: fileId,
-      status: 'uploading',
-      progress: 0,
-    };
+    if (pptxFiles.length > availableSlots) {
+      alert(`현재 ${currentCount}개 파일이 업로드되어 있습니다. ${availableSlots}개 파일만 추가로 업로드할 수 있습니다.`);
+      pptxFiles.splice(availableSlots);
+    }
 
-    setUploadedFiles(prev => [...prev, newFile]);
+    // 각 파일을 개별적으로 처리
+    for (const file of pptxFiles) {
+      const fileId = Date.now() + Math.random().toString(36);
+      
+      // 파일 추가
+      const newFile: UploadedFile = {
+        file,
+        id: fileId,
+        status: 'uploading',
+        progress: 0,
+      };
+
+      setUploadedFiles(prev => [...prev, newFile]);
 
       try {
         const authToken = localStorage.getItem('authToken');
@@ -172,15 +182,16 @@ export default function UploadPage() {
               : f
           )
         );
+      }
     }
-  }, []);
+  }, [uploadedFiles.length]);
 
   const { getRootProps, getInputProps, isDragActive } = useDropzone({
     onDrop,
     accept: {
       'application/vnd.openxmlformats-officedocument.presentationml.presentation': ['.pptx']
     },
-    multiple: false,
+    multiple: true,
     maxSize: 25 * 1024 * 1024, // 25MB (청크 업로드 지원)
   });
 
@@ -196,40 +207,58 @@ export default function UploadPage() {
       return;
     }
 
-    if (uploadedFilesList.length > 1) {
-      alert('현재는 한 번에 하나의 파일만 분석할 수 있습니다. 첫 번째 파일을 분석합니다.');
-    }
-
     setIsProcessing(true);
     
     try {
-      // 분석 API 호출
-      const response = await fetch('/api/analyze', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          'Authorization': `Bearer ${localStorage.getItem('authToken')}`,
-        },
-        body: JSON.stringify({
-          fileUrl: uploadedFilesList[0].url
-        }),
+      // 모든 파일을 분석하기 위해 병렬 처리
+      console.log(`${uploadedFilesList.length}개 파일 분석 시작`);
+      
+      const analysisPromises = uploadedFilesList.map(async (file, index) => {
+        console.log(`파일 ${index + 1}/${uploadedFilesList.length} 분석 중: ${file.file.name}`);
+        
+        const response = await fetch('/api/analyze', {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+            'Authorization': `Bearer ${localStorage.getItem('authToken')}`,
+          },
+          body: JSON.stringify({
+            fileUrl: file.url,
+            fileName: file.file.name
+          }),
+        });
+
+        if (!response.ok) {
+          const errorData = await response.json();
+          throw new Error(`${file.file.name}: ${errorData.error || '분석 실패'}`);
+        }
+
+        const result = await response.json();
+        return {
+          ...result,
+          fileName: file.file.name,
+          fileId: file.id
+        };
       });
 
-      if (!response.ok) {
-        const errorData = await response.json();
-        throw new Error(errorData.error || '분석 요청 실패');
-      }
-
-      const result = await response.json();
-      console.log('Analysis result:', result);
+      // 모든 분석 완료 대기
+      const results = await Promise.all(analysisPromises);
       
-      // 분석 결과를 로컬 스토리지에 저장 (리뷰 페이지에서 사용)
-      localStorage.setItem('analysisResult', JSON.stringify(result));
+      console.log('모든 파일 분석 완료:', results);
       
-      // 파일명도 저장 (리뷰 페이지에서 표시용)
-      if (uploadedFilesList[0].file?.name) {
-        localStorage.setItem('uploadedFileName', uploadedFilesList[0].file.name);
-      }
+      // 결과를 localStorage에 저장 (다중 파일 지원)
+      const analysisResults = {
+        files: results.map(result => ({
+          fileName: result.fileName,
+          fileId: result.fileId,
+          jobId: result.jobId,
+          suggestions: result.suggestions || [],
+          stats: result.stats || {},
+        })),
+        timestamp: new Date().toISOString(),
+      };
+      
+      localStorage.setItem('analysisResults', JSON.stringify(analysisResults));
       
       // 리뷰 페이지로 이동
       router.push('/review');

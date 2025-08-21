@@ -26,6 +26,19 @@ type AnalyzeResult = {
   stats: { slides: number; shapes: number; runs: number; tokensEstimated: number };
 };
 
+type FileAnalysisResult = {
+  fileName: string;
+  fileId: string;
+  jobId: string;
+  suggestions: Suggestion[];
+  stats: { slides: number; shapes: number; runs: number; tokensEstimated: number };
+};
+
+type MultiFileAnalysisResult = {
+  files: FileAnalysisResult[];
+  timestamp: string;
+};
+
 const mockAnalyzeResult: AnalyzeResult = {
   jobId: "test-job-12345",
   suggestions: [
@@ -95,11 +108,11 @@ const mockAnalyzeResult: AnalyzeResult = {
 
 function ReviewContent() {
   const [isAuthenticated, setIsAuthenticated] = useState(false);
-  const [analyzeResult, setAnalyzeResult] = useState<AnalyzeResult | null>(null);
+  const [analysisResults, setAnalysisResults] = useState<MultiFileAnalysisResult | null>(null);
+  const [selectedFileIndex, setSelectedFileIndex] = useState<number>(0);
   const [selectedSuggestions, setSelectedSuggestions] = useState<string[]>([]);
   const [isApplying, setIsApplying] = useState(false);
   const [mousePosition, setMousePosition] = useState({ x: 0, y: 0 });
-  const [fileName, setFileName] = useState<string>('');
   
   // 필터링 상태 (복수 선택 가능)
   const [filterTypes, setFilterTypes] = useState<string[]>(['all']);
@@ -117,34 +130,71 @@ function ReviewContent() {
       router.push("/auth");
     }
 
-    // 분석 결과 로드 (로컬 스토리지에서 또는 Mock 데이터)
-    const savedResult = localStorage.getItem("analysisResult");
+    // 분석 결과 로드 (다중 파일 지원)
+    const savedResults = localStorage.getItem("analysisResults");
+    const savedResult = localStorage.getItem("analysisResult"); // 이전 버전과의 호환성
     const savedFileName = localStorage.getItem("uploadedFileName");
     
-    if (savedFileName) {
-      setFileName(savedFileName);
-    }
-    
-    if (savedResult) {
+    if (savedResults) {
+      try {
+        const parsedResults: MultiFileAnalysisResult = JSON.parse(savedResults);
+        setAnalysisResults(parsedResults);
+      } catch (error) {
+        console.error("다중 파일 분석 결과 파싱 오류:", error);
+        // Fallback으로 Mock 데이터 사용
+        setAnalysisResults({
+          files: [{ 
+            fileName: savedFileName || 'sample.pptx',
+            fileId: 'mock-file-1',
+            ...mockAnalyzeResult 
+          }],
+          timestamp: new Date().toISOString()
+        });
+      }
+    } else if (savedResult) {
+      // 이전 버전 호환성 (단일 파일)
       try {
         const parsedResult = JSON.parse(savedResult);
-        // API 응답 구조에 맞게 변환
         if (parsedResult.suggestions) {
-          setAnalyzeResult(parsedResult);
+          setAnalysisResults({
+            files: [{
+              fileName: savedFileName || 'uploaded.pptx',
+              fileId: 'legacy-file-1',
+              ...parsedResult
+            }],
+            timestamp: new Date().toISOString()
+          });
         } else {
-          // 분석 결과가 다른 형식인 경우 Mock 데이터 사용
-          setAnalyzeResult(mockAnalyzeResult);
+          setAnalysisResults({
+            files: [{ 
+              fileName: savedFileName || 'sample.pptx',
+              fileId: 'mock-file-1',
+              ...mockAnalyzeResult 
+            }],
+            timestamp: new Date().toISOString()
+          });
         }
       } catch (error) {
         console.error("분석 결과 파싱 오류:", error);
-        setAnalyzeResult(mockAnalyzeResult);
+        setAnalysisResults({
+          files: [{ 
+            fileName: 'sample.pptx',
+            fileId: 'mock-file-1',
+            ...mockAnalyzeResult 
+          }],
+          timestamp: new Date().toISOString()
+        });
       }
     } else {
       // 저장된 결과가 없으면 Mock 데이터 사용
-      setTimeout(() => {
-        setAnalyzeResult(mockAnalyzeResult);
-        setFileName("샘플 프레젠테이션.pptx");
-      }, 1000);
+      setAnalysisResults({
+        files: [{ 
+          fileName: 'sample.pptx',
+          fileId: 'mock-file-1',
+          ...mockAnalyzeResult 
+        }],
+        timestamp: new Date().toISOString()
+      });
     }
   }, [router, searchParams]);
 
@@ -155,6 +205,14 @@ function ReviewContent() {
     window.addEventListener("mousemove", handleMouseMove);
     return () => window.removeEventListener("mousemove", handleMouseMove);
   }, []);
+
+  // 현재 선택된 파일의 데이터
+  const currentFile = analysisResults?.files[selectedFileIndex] || null;
+  const analyzeResult = currentFile ? {
+    jobId: currentFile.jobId,
+    suggestions: currentFile.suggestions,
+    stats: currentFile.stats
+  } : null;
 
   const handleLogout = () => {
     localStorage.removeItem("authToken");
@@ -169,16 +227,6 @@ function ReviewContent() {
     );
   };
 
-  const selectAll = () => {
-    if (!analyzeResult) return;
-    const allIds = analyzeResult.suggestions.map((_, index) => index.toString());
-    setSelectedSuggestions(allIds);
-  };
-
-  const deselectAll = () => {
-    setSelectedSuggestions([]);
-  };
-
   // 필터링된 제안사항 계산
   const filteredSuggestions = analyzeResult?.suggestions.filter(suggestion => {
     // 유형 필터 (복수 선택)
@@ -187,6 +235,36 @@ function ReviewContent() {
     if (!filterSeverities.includes('all') && !filterSeverities.includes(suggestion.severity)) return false;
     return true;
   }) || [];
+
+  const selectAll = () => {
+    if (!analyzeResult) return;
+    
+    // 필터링된 제안사항의 ID만 가져오기
+    const filteredIds = filteredSuggestions.map((_, filteredIndex) => {
+      // 원본 배열에서의 실제 인덱스 찾기
+      const originalIndex = analyzeResult.suggestions.findIndex(s => s === filteredSuggestions[filteredIndex]);
+      return originalIndex.toString();
+    });
+    
+    // 기존 선택된 항목에 새로운 항목들을 추가 (중복 제거)
+    setSelectedSuggestions(prev => {
+      const newSet = new Set([...prev, ...filteredIds]);
+      return Array.from(newSet);
+    });
+  };
+
+  const deselectAll = () => {
+    if (!analyzeResult) return;
+    
+    // 필터링된 제안사항의 ID만 가져와서 해제
+    const filteredIds = filteredSuggestions.map((_, filteredIndex) => {
+      const originalIndex = analyzeResult.suggestions.findIndex(s => s === filteredSuggestions[filteredIndex]);
+      return originalIndex.toString();
+    });
+    
+    // 기존 선택에서 필터링된 항목들만 제거
+    setSelectedSuggestions(prev => prev.filter(id => !filteredIds.includes(id)));
+  };
 
   // 필터 체크박스 핸들러
   const handleTypeFilterChange = (type: string, checked: boolean) => {
@@ -326,10 +404,26 @@ function ReviewContent() {
               <h1 className="text-2xl font-bold bg-gradient-to-r from-amber-600 to-orange-500 bg-clip-text text-transparent">
                 맞춤법 검사 결과
               </h1>
-              {fileName && (
-                <p className="text-sm text-gray-600 mt-1">
-                  📄 {fileName}
-                </p>
+              {analysisResults && analysisResults.files.length > 0 && (
+                <div className="mt-2">
+                  {analysisResults.files.length === 1 ? (
+                    <p className="text-sm text-gray-600">
+                      📄 {analysisResults.files[0].fileName}
+                    </p>
+                  ) : (
+                    <select
+                      value={selectedFileIndex}
+                      onChange={(e) => setSelectedFileIndex(Number(e.target.value))}
+                      className="text-sm bg-white border border-amber-200 rounded-lg px-3 py-1.5 text-gray-700 focus:outline-none focus:ring-2 focus:ring-amber-500 focus:border-transparent"
+                    >
+                      {analysisResults.files.map((file, index) => (
+                        <option key={index} value={index}>
+                          📄 {file.fileName}
+                        </option>
+                      ))}
+                    </select>
+                  )}
+                </div>
               )}
             </div>
           </div>
@@ -510,9 +604,10 @@ function ReviewContent() {
                 return (
                   <Card 
                     key={`${suggestion.slideIndex}-${suggestion.shapeId}-${index}`}
-                    className={`bg-gradient-to-br from-white/90 to-amber-50/90 backdrop-blur-sm shadow-xl transition-all duration-300 hover:-translate-y-1 hover:shadow-2xl ${
+                    className={`bg-gradient-to-br from-white/90 to-amber-50/90 backdrop-blur-sm shadow-xl transition-all duration-300 hover:-translate-y-1 hover:shadow-2xl cursor-pointer ${
                       selectedSuggestions.includes(originalIndex.toString()) ? 'ring-2 ring-amber-400 border-amber-300' : 'border-amber-200'
                     }`}
+                    onClick={() => toggleSuggestion(originalIndex.toString())}
                   >
                     <CardContent className="p-6">
                       <div className="flex items-start gap-4">
@@ -520,6 +615,7 @@ function ReviewContent() {
                           checked={selectedSuggestions.includes(originalIndex.toString())}
                           onCheckedChange={() => toggleSuggestion(originalIndex.toString())}
                           className="mt-1"
+                          onClick={(e) => e.stopPropagation()}
                         />
                         
                         <div className="flex-1">
