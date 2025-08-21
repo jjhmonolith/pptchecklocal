@@ -26,7 +26,7 @@ export function middleware(request: NextRequest) {
   try {
     verify(token, JWT_SECRET);
     return NextResponse.next();
-  } catch (error) {
+  } catch {
     return NextResponse.redirect(new URL("/auth", request.url));
   }
 }

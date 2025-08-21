@@ -46,7 +46,7 @@ export default function AuthPage() {
       } else {
         setError(data.error || "인증에 실패했습니다.");
       }
-    } catch (error) {
+    } catch {
       setError("네트워크 오류가 발생했습니다.");
     } finally {
       setIsLoading(false);
