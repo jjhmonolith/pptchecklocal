@@ -6,6 +6,7 @@ import { useDropzone } from "react-dropzone";
 import { FileText, LogOut, Upload, File, X, CheckCircle, AlertCircle, Loader2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
+import { ChunkUploader } from "@/lib/chunk-uploader";
 
 interface UploadedFile {
   file: File;
@@ -64,52 +65,97 @@ export default function UploadPage() {
       setUploadedFiles(prev => [...prev, newFile]);
 
       try {
-        // FormData로 실제 파일 업로드
-        const formData = new FormData();
-        formData.append('file', file);
-
-        // 업로드 진행률 시뮬레이션 시작
-        setUploadedFiles(prev => 
-          prev.map(f => 
-            f.id === fileId 
-              ? { ...f, progress: 20 }
-              : f
-          )
-        );
-
-        const uploadResponse = await fetch('/api/upload-blob', {
-          method: 'POST',
-          headers: {
-            'Authorization': `Bearer ${localStorage.getItem('authToken')}`,
-          },
-          body: formData,
-        });
-
-        // 진행률 업데이트
-        setUploadedFiles(prev => 
-          prev.map(f => 
-            f.id === fileId 
-              ? { ...f, progress: 70 }
-              : f
-          )
-        );
-
-        if (!uploadResponse.ok) {
-          const errorData = await uploadResponse.json();
-          throw new Error(errorData.error || '파일 업로드 실패');
+        const authToken = localStorage.getItem('authToken');
+        if (!authToken) {
+          throw new Error('인증 토큰이 없습니다.');
         }
 
-        const { fileUrl } = await uploadResponse.json();
-        console.log('파일 업로드 완료:', fileUrl);
+        // 파일 크기에 따라 업로드 방식 결정
+        const useChunkUpload = ChunkUploader.needsChunking(file);
+        console.log(`파일 크기: ${(file.size / 1024 / 1024).toFixed(2)}MB, 청크 업로드: ${useChunkUpload}`);
 
-        // 완료 처리
-        setUploadedFiles(prev => 
-          prev.map(f => 
-            f.id === fileId 
-              ? { ...f, status: 'uploaded', progress: 100, url: fileUrl }
-              : f
-          )
-        );
+        if (useChunkUpload) {
+          // 청크 업로드 사용
+          const result = await ChunkUploader.upload({
+            file,
+            authToken,
+            onProgress: (progress, uploadedChunks, totalChunks) => {
+              console.log(`청크 업로드 진행률: ${progress}% (${uploadedChunks}/${totalChunks})`);
+              setUploadedFiles(prev => 
+                prev.map(f => 
+                  f.id === fileId 
+                    ? { ...f, progress }
+                    : f
+                )
+              );
+            },
+            onError: (error) => {
+              console.error('청크 업로드 오류:', error);
+            }
+          });
+
+          if (!result.success) {
+            throw new Error(result.error || '청크 업로드 실패');
+          }
+
+          console.log('청크 업로드 완료:', result.fileUrl);
+
+          // 완료 처리
+          setUploadedFiles(prev => 
+            prev.map(f => 
+              f.id === fileId 
+                ? { ...f, status: 'uploaded', progress: 100, url: result.fileUrl }
+                : f
+            )
+          );
+
+        } else {
+          // 일반 업로드 사용 (4MB 이하)
+          const formData = new FormData();
+          formData.append('file', file);
+
+          // 진행률 업데이트
+          setUploadedFiles(prev => 
+            prev.map(f => 
+              f.id === fileId 
+                ? { ...f, progress: 30 }
+                : f
+            )
+          );
+
+          const uploadResponse = await fetch('/api/upload-blob', {
+            method: 'POST',
+            headers: {
+              'Authorization': `Bearer ${authToken}`,
+            },
+            body: formData,
+          });
+
+          setUploadedFiles(prev => 
+            prev.map(f => 
+              f.id === fileId 
+                ? { ...f, progress: 70 }
+                : f
+            )
+          );
+
+          if (!uploadResponse.ok) {
+            const errorData = await uploadResponse.json();
+            throw new Error(errorData.error || '파일 업로드 실패');
+          }
+
+          const { fileUrl } = await uploadResponse.json();
+          console.log('일반 업로드 완료:', fileUrl);
+
+          // 완료 처리
+          setUploadedFiles(prev => 
+            prev.map(f => 
+              f.id === fileId 
+                ? { ...f, status: 'uploaded', progress: 100, url: fileUrl }
+                : f
+            )
+          );
+        }
 
       } catch (error) {
         console.error('Upload error:', error);
@@ -130,7 +176,7 @@ export default function UploadPage() {
       'application/vnd.openxmlformats-officedocument.presentationml.presentation': ['.pptx']
     },
     multiple: true,
-    maxSize: 25 * 1024 * 1024, // 25MB
+    maxSize: 25 * 1024 * 1024, // 25MB (청크 업로드 지원)
   });
 
   const removeFile = (id: string) => {
