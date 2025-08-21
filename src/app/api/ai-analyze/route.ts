@@ -75,9 +75,9 @@ export async function POST(request: NextRequest) {
         result.corrections?.map((correction: {
           original: string;
           revised: string;
-          type: string;
+          type: 'spelling' | 'spacing' | 'punctuation' | 'grammar' | 'long_sentence' | 'expression';
           reason: string;
-          severity: string;
+          severity: 'critical' | 'important' | 'minor';
         }, index: number) => ({
           slideIndex: result.slideIndex || 1,
           shapeId: result.shapeId || `chunk-${chunkIndex}-shape-${index + 1}`,
@@ -213,21 +213,47 @@ async function processTextChunk(chunk: TextChunk, apiKey: string, index: number)
         messages: [
           {
             role: 'system',
-            content: '당신은 한국어 맞춤법 검사 전문가입니다. 주어진 텍스트의 맞춤법, 띄어쓰기, 문법, 일관성, 문체를 검사하고 JSON 형태로 교정 제안을 제공합니다.'
+            content: '당신은 국립국어원 표준을 따르는 한국어 교정 전문가입니다. 프레젠테이션 텍스트의 기본적인 오류만을 교정하며, 문장의 의미나 내용을 절대 변경하지 않습니다.'
           },
           {
             role: 'user',
-            content: `다음 한국어 텍스트의 맞춤법, 띄어쓰기, 문법, 일관성, 문체를 검사하고 교정 제안을 JSON 형태로 제공해 주세요.
+            content: `다음 프레젠테이션 텍스트를 검사하고 교정 제안을 JSON 형태로 제공해 주세요.
 
 검사할 텍스트:
 "${chunk.text}"
 
-다음 기준으로 검사해 주세요:
-1. **맞춤법 (spelling)**: 잘못된 철자
-2. **띄어쓰기 (spacing)**: 잘못된 띄어쓰기
-3. **문법 (grammar)**: 문법적 오류
-4. **일관성 (consistency)**: 용어나 표기의 일관성
-5. **문체 (style)**: 더 나은 표현이나 간결한 문장
+**교정 기준 (중요도 순):**
+
+1. **맞춤법 (spelling)**: 국립국어원 표준 맞춤법 기준
+   - 잘못된 철자, 외래어 표기법 오류
+   - 예: "되" vs "돼", "프로그램" vs "프로그래밍"
+
+2. **띄어쓰기 (spacing)**: 한글 맞춤법 띄어쓰기 규정
+   - 조사, 어미, 접사 띄어쓰기 오류
+   - 예: "안녕 하세요" → "안녕하세요"
+
+3. **문장부호 (punctuation)**: 문장부호 사용법
+   - 마침표, 쉼표, 따옴표 등의 올바른 사용
+   - 예: "안녕하세요 ." → "안녕하세요."
+
+4. **문법오류 (grammar)**: 명백한 문법 오류만
+   - 조사 사용 오류, 시제 불일치 등
+   - 예: "을/를" 혼용, "다/요" 체계 혼용
+
+5. **긴문장분할 (long_sentence)**: 지나치게 긴 문장 (80자 이상)
+   - 읽기 어려운 긴 문장을 자연스럽게 분할
+   - 의미 변경 없이 문장부호로만 분할
+
+6. **표현개선 (expression)**: 어색한 표현 개선
+   - 중복 표현, 부자연스러운 어순 등
+   - 의미는 그대로 유지하며 자연스럽게 개선
+
+**절대 금지사항:**
+- 문장의 의미나 내용 변경 금지
+- 문제/퀴즈의 정답 변경 금지  
+- 전문 용어나 고유명사 변경 금지
+- 문장 형태(평어/경어, 구어/문어) 변경 금지
+- 서식이나 레이아웃 변경 금지
 
 응답 형식 (JSON):
 {
@@ -235,18 +261,21 @@ async function processTextChunk(chunk: TextChunk, apiKey: string, index: number)
     {
       "original": "원본 텍스트",
       "revised": "교정된 텍스트", 
-      "type": "spelling|spacing|grammar|consistency|style",
+      "type": "spelling|spacing|punctuation|grammar|long_sentence|expression",
       "reason": "교정 이유 설명",
-      "severity": "high|med|low"
+      "severity": "critical|important|minor"
     }
   ]
 }
 
-중요한 점:
-- 명확한 오류만 교정 제안하세요
-- 교정 이유를 명확히 설명하세요  
-- 심각도(severity)를 적절히 판단하세요
-- 원본과 교정본이 동일한 경우는 제외하세요
+**심각도 기준:**
+- critical: 맞춤법, 띄어쓰기, 명백한 문법 오류 (반드시 수정)
+- important: 문장부호, 긴문장 분할 (권장 수정)
+- minor: 표현 개선 (선택적 수정)
+
+**중요한 점:**
+- 확실한 오류만 제안하세요
+- 의미 변경이 의심되면 제안하지 마세요
 - 빈 배열 {"corrections": []} 도 유효한 응답입니다`
           }
         ],
@@ -304,8 +333,8 @@ function generateMockAIAnalysis(pptxData: {
       original: "안녕 하세요",
       revised: "안녕하세요",
       type: "spacing",
-      reason: "인사말은 띄어쓰지 않습니다.",
-      severity: "high"
+      reason: "인사말은 띄어쓰지 않습니다. (한글 맞춤법 띄어쓰기 규정)",
+      severity: "critical"
     },
     {
       slideIndex: 1,
@@ -314,38 +343,48 @@ function generateMockAIAnalysis(pptxData: {
       original: "프레젠테이숀",
       revised: "프레젠테이션",
       type: "spelling",
-      reason: "'프레젠테이션'이 올바른 표기입니다.",
-      severity: "high"
+      reason: "'프레젠테이션'이 표준 외래어 표기법에 맞는 올바른 표기입니다.",
+      severity: "critical"
+    },
+    {
+      slideIndex: 1,
+      shapeId: "shape-1-3",
+      runPath: [1, 1],
+      original: "안녕하세요 .",
+      revised: "안녕하세요.",
+      type: "punctuation",
+      reason: "마침표 앞에 공백이 있으면 안 됩니다.",
+      severity: "important"
     },
     {
       slideIndex: 2,
       shapeId: "shape-2-1",
       runPath: [0, 1],
-      original: "있읍니다",
-      revised: "있습니다",
+      original: "데이타베이스를 사용해서 정보를 저장하고 있읍니다",
+      revised: "데이터베이스를 사용해서 정보를 저장하고 있습니다",
       type: "spelling",
-      reason: "'있습니다'가 표준 맞춤법입니다.",
-      severity: "med"
+      reason: "'데이터'와 '있습니다'가 표준 맞춤법입니다.",
+      severity: "critical"
     },
     {
       slideIndex: 2,
       shapeId: "shape-2-2",
       runPath: [1, 0],
-      original: "데이타",
-      revised: "데이터",
-      type: "consistency",
-      reason: "'데이터'가 표준 외래어 표기법에 맞습니다.",
-      severity: "low"
+      original: "이 시스템은 매우 복잡하고 어려우며 사용자가 이해하기 힘들고 접근성이 떨어지는 특징을 가지고 있어서 개선이 필요합니다.",
+      revised: "이 시스템은 매우 복잡하고 어려우며 사용자가 이해하기 힘듭니다. 접근성이 떨어지는 특징을 가지고 있어서 개선이 필요합니다.",
+      type: "long_sentence",
+      reason: "80자가 넘는 긴 문장을 읽기 쉽게 두 문장으로 분할했습니다.",
+      severity: "important"
     },
     {
       slideIndex: 3,
       shapeId: "shape-3-1",
       runPath: [0, 0],
-      original: "하였습니다",
-      revised: "했습니다",
-      type: "style",
-      reason: "'했습니다'가 더 자연스러운 표현입니다.",
-      severity: "low"
+      original: "그래서 그러므로",
+      revised: "그러므로",
+      type: "expression",
+      reason: "중복 표현을 제거하여 자연스럽게 개선했습니다.",
+      severity: "minor"
     }
   ];
 

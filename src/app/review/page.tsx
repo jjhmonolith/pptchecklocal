@@ -2,7 +2,7 @@
 
 import { useEffect, useState, Suspense } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
-import { FileText, LogOut, ArrowLeft, CheckCircle, AlertCircle, Info, Zap, Download, Loader2 } from "lucide-react";
+import { FileText, LogOut, ArrowLeft, CheckCircle, AlertCircle, Info, Zap, Download, Loader2, Filter, Type, Minus } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Checkbox } from "@/components/ui/checkbox";
@@ -15,9 +15,9 @@ type Suggestion = {
   runPath: number[];
   original: string;
   revised: string;
-  type: "spelling" | "spacing" | "grammar" | "style" | "consistency";
+  type: "spelling" | "spacing" | "punctuation" | "grammar" | "long_sentence" | "expression";
   reason: string;
-  severity: "low" | "med" | "high";
+  severity: "critical" | "important" | "minor";
 };
 
 type AnalyzeResult = {
@@ -31,56 +31,66 @@ const mockAnalyzeResult: AnalyzeResult = {
   suggestions: [
     {
       slideIndex: 1,
-      shapeId: "shape-1",
+      shapeId: "shape-1-1",
       runPath: [0, 0],
       original: "안녕 하세요",
       revised: "안녕하세요",
       type: "spacing",
-      reason: "띄어쓰기 오류",
-      severity: "high"
+      reason: "인사말은 띄어쓰지 않습니다. (한글 맞춤법 띄어쓰기 규정)",
+      severity: "critical"
     },
     {
       slideIndex: 1,
-      shapeId: "shape-2", 
+      shapeId: "shape-1-2",
       runPath: [1, 0],
       original: "프레젠테이숀",
       revised: "프레젠테이션",
       type: "spelling",
-      reason: "맞춤법 오류",
-      severity: "high"
+      reason: "'프레젠테이션'이 표준 외래어 표기법에 맞는 올바른 표기입니다.",
+      severity: "critical"
+    },
+    {
+      slideIndex: 1,
+      shapeId: "shape-1-3",
+      runPath: [1, 1],
+      original: "안녕하세요 .",
+      revised: "안녕하세요.",
+      type: "punctuation",
+      reason: "마침표 앞에 공백이 있으면 안 됩니다.",
+      severity: "important"
     },
     {
       slideIndex: 2,
-      shapeId: "shape-3",
+      shapeId: "shape-2-1",
       runPath: [0, 1],
-      original: "있읍니다",
-      revised: "있습니다",
-      type: "spelling", 
-      reason: "맞춤법 오류",
-      severity: "med"
+      original: "데이타베이스를 사용해서 정보를 저장하고 있읍니다",
+      revised: "데이터베이스를 사용해서 정보를 저장하고 있습니다",
+      type: "spelling",
+      reason: "'데이터'와 '있습니다'가 표준 맞춤법입니다.",
+      severity: "critical"
+    },
+    {
+      slideIndex: 2,
+      shapeId: "shape-2-2",
+      runPath: [1, 0],
+      original: "이 시스템은 매우 복잡하고 어려우며 사용자가 이해하기 힘들고 접근성이 떨어지는 특징을 가지고 있어서 개선이 필요합니다.",
+      revised: "이 시스템은 매우 복잡하고 어려우며 사용자가 이해하기 힘듭니다. 접근성이 떨어지는 특징을 가지고 있어서 개선이 필요합니다.",
+      type: "long_sentence",
+      reason: "80자가 넘는 긴 문장을 읽기 쉽게 두 문장으로 분할했습니다.",
+      severity: "important"
     },
     {
       slideIndex: 3,
-      shapeId: "shape-4",
-      runPath: [2, 0],
-      original: "데이타",
-      revised: "데이터",
-      type: "consistency",
-      reason: "일관성 유지를 위해 표준 표기 사용 권장",
-      severity: "low"
-    },
-    {
-      slideIndex: 3,
-      shapeId: "shape-5",
-      runPath: [0, 2],
-      original: "하였습니다.",
-      revised: "했습니다.",
-      type: "style",
-      reason: "간결한 표현 권장",
-      severity: "low"
+      shapeId: "shape-3-1",
+      runPath: [0, 0],
+      original: "그래서 그러므로",
+      revised: "그러므로",
+      type: "expression",
+      reason: "중복 표현을 제거하여 자연스럽게 개선했습니다.",
+      severity: "minor"
     }
   ],
-  stats: { slides: 3, shapes: 5, runs: 12, tokensEstimated: 150 }
+  stats: { slides: 3, shapes: 6, runs: 12, tokensEstimated: 150 }
 };
 
 function ReviewContent() {
@@ -89,6 +99,12 @@ function ReviewContent() {
   const [selectedSuggestions, setSelectedSuggestions] = useState<string[]>([]);
   const [isApplying, setIsApplying] = useState(false);
   const [mousePosition, setMousePosition] = useState({ x: 0, y: 0 });
+  
+  // 필터링 상태
+  const [filterType, setFilterType] = useState<string>('all');
+  const [filterSeverity, setFilterSeverity] = useState<string>('all');
+  const [showFilters, setShowFilters] = useState(false);
+  
   const router = useRouter();
   const searchParams = useSearchParams();
 
@@ -155,11 +171,18 @@ function ReviewContent() {
     setSelectedSuggestions([]);
   };
 
+  // 필터링된 제안사항 계산
+  const filteredSuggestions = analyzeResult?.suggestions.filter(suggestion => {
+    if (filterType !== 'all' && suggestion.type !== filterType) return false;
+    if (filterSeverity !== 'all' && suggestion.severity !== filterSeverity) return false;
+    return true;
+  }) || [];
+
   const getSeverityColor = (severity: string) => {
     switch (severity) {
-      case 'high': return 'text-red-600 bg-red-50 border-red-200';
-      case 'med': return 'text-orange-600 bg-orange-50 border-orange-200';
-      case 'low': return 'text-blue-600 bg-blue-50 border-blue-200';
+      case 'critical': return 'text-red-600 bg-red-50 border-red-200';
+      case 'important': return 'text-orange-600 bg-orange-50 border-orange-200';
+      case 'minor': return 'text-blue-600 bg-blue-50 border-blue-200';
       default: return 'text-gray-600 bg-gray-50 border-gray-200';
     }
   };
@@ -168,10 +191,32 @@ function ReviewContent() {
     switch (type) {
       case 'spelling': return <AlertCircle className="h-4 w-4" />;
       case 'spacing': return <Zap className="h-4 w-4" />;
+      case 'punctuation': return <Type className="h-4 w-4" />;
       case 'grammar': return <CheckCircle className="h-4 w-4" />;
-      case 'style': return <Info className="h-4 w-4" />;
-      case 'consistency': return <FileText className="h-4 w-4" />;
+      case 'long_sentence': return <Minus className="h-4 w-4" />;
+      case 'expression': return <Info className="h-4 w-4" />;
       default: return <Info className="h-4 w-4" />;
+    }
+  };
+
+  const getTypeName = (type: string) => {
+    switch (type) {
+      case 'spelling': return '맞춤법';
+      case 'spacing': return '띄어쓰기';
+      case 'punctuation': return '문장부호';
+      case 'grammar': return '문법';
+      case 'long_sentence': return '긴문장';
+      case 'expression': return '표현개선';
+      default: return type;
+    }
+  };
+
+  const getSeverityName = (severity: string) => {
+    switch (severity) {
+      case 'critical': return '필수';
+      case 'important': return '권장';
+      case 'minor': return '선택';
+      default: return severity;
     }
   };
 
@@ -293,7 +338,7 @@ function ReviewContent() {
 
           {/* Control Card */}
           <Card className="bg-gradient-to-br from-white/90 to-amber-50/90 backdrop-blur-sm shadow-xl border-amber-200">
-            <CardContent className="p-6">
+            <CardContent className="p-6 space-y-4">
               <div className="flex justify-between items-center">
                 <div className="flex gap-4">
                   <Button 
@@ -309,6 +354,14 @@ function ReviewContent() {
                     className="border-amber-200 hover:bg-amber-50"
                   >
                     전체 해제
+                  </Button>
+                  <Button
+                    onClick={() => setShowFilters(!showFilters)}
+                    variant="outline"
+                    className="border-amber-200 hover:bg-amber-50 flex items-center gap-2"
+                  >
+                    <Filter className="h-4 w-4" />
+                    필터 ({filteredSuggestions.length}/{analyzeResult?.suggestions.length || 0})
                   </Button>
                 </div>
                 <Button
@@ -330,72 +383,123 @@ function ReviewContent() {
                   )}
                 </Button>
               </div>
+
+              {/* 필터 옵션 */}
+              {showFilters && (
+                <div className="border-t pt-4 grid grid-cols-1 md:grid-cols-2 gap-4">
+                  <div>
+                    <label className="text-sm font-medium text-gray-700 mb-2 block">교정 유형</label>
+                    <select 
+                      value={filterType} 
+                      onChange={(e) => setFilterType(e.target.value)}
+                      className="w-full px-3 py-2 border border-amber-200 rounded-lg focus:ring-2 focus:ring-amber-300 focus:border-transparent"
+                    >
+                      <option value="all">전체</option>
+                      <option value="spelling">맞춤법</option>
+                      <option value="spacing">띄어쓰기</option>
+                      <option value="punctuation">문장부호</option>
+                      <option value="grammar">문법</option>
+                      <option value="long_sentence">긴문장</option>
+                      <option value="expression">표현개선</option>
+                    </select>
+                  </div>
+                  <div>
+                    <label className="text-sm font-medium text-gray-700 mb-2 block">중요도</label>
+                    <select 
+                      value={filterSeverity} 
+                      onChange={(e) => setFilterSeverity(e.target.value)}
+                      className="w-full px-3 py-2 border border-amber-200 rounded-lg focus:ring-2 focus:ring-amber-300 focus:border-transparent"
+                    >
+                      <option value="all">전체</option>
+                      <option value="critical">필수 (반드시 수정)</option>
+                      <option value="important">권장 (수정 권장)</option>
+                      <option value="minor">선택 (선택적 수정)</option>
+                    </select>
+                  </div>
+                </div>
+              )}
             </CardContent>
           </Card>
 
           {/* Suggestions List */}
           <div className="space-y-4">
-            {analyzeResult.suggestions.map((suggestion, index) => (
-              <Card 
-                key={index} 
-                className={`bg-gradient-to-br from-white/90 to-amber-50/90 backdrop-blur-sm shadow-xl transition-all duration-300 hover:-translate-y-1 hover:shadow-2xl ${
-                  selectedSuggestions.includes(index.toString()) ? 'ring-2 ring-amber-400 border-amber-300' : 'border-amber-200'
-                }`}
-              >
-                <CardContent className="p-6">
-                  <div className="flex items-start gap-4">
-                    <Checkbox
-                      checked={selectedSuggestions.includes(index.toString())}
-                      onCheckedChange={() => toggleSuggestion(index.toString())}
-                      className="mt-1"
-                    />
-                    
-                    <div className="flex-1">
-                      <div className="flex items-center gap-2 mb-3">
-                        <span className={`inline-flex items-center gap-1 px-2 py-1 rounded-md text-xs font-medium border ${getSeverityColor(suggestion.severity)}`}>
-                          {getTypeIcon(suggestion.type)}
-                          {suggestion.type === 'spelling' ? '맞춤법' :
-                           suggestion.type === 'spacing' ? '띄어쓰기' :
-                           suggestion.type === 'grammar' ? '문법' :
-                           suggestion.type === 'style' ? '문체' : '일관성'}
-                        </span>
-                        <span className="text-sm text-gray-500">
-                          슬라이드 {suggestion.slideIndex}
-                        </span>
-                        <span className={`px-2 py-1 rounded text-xs ${
-                          suggestion.severity === 'high' ? 'bg-red-100 text-red-700' :
-                          suggestion.severity === 'med' ? 'bg-orange-100 text-orange-700' :
-                          'bg-blue-100 text-blue-700'
-                        }`}>
-                          {suggestion.severity === 'high' ? '높음' :
-                           suggestion.severity === 'med' ? '보통' : '낮음'}
-                        </span>
-                      </div>
-                      
-                      <div className="space-y-2">
-                        <div className="flex items-center gap-4">
-                          <div className="flex-1">
-                            <div className="text-sm text-gray-600 mb-1">원본:</div>
-                            <div className="px-3 py-2 bg-red-50 border border-red-200 rounded-lg">
-                              <span className="line-through text-red-700">{suggestion.original}</span>
-                            </div>
-                          </div>
-                          <div className="flex-1">
-                            <div className="text-sm text-gray-600 mb-1">수정:</div>
-                            <div className="px-3 py-2 bg-green-50 border border-green-200 rounded-lg">
-                              <span className="text-green-700 font-medium">{suggestion.revised}</span>
-                            </div>
-                          </div>
-                        </div>
-                        <div className="text-sm text-gray-600 italic">
-                          💡 {suggestion.reason}
-                        </div>
-                      </div>
-                    </div>
+            {filteredSuggestions.length === 0 ? (
+              <Card className="bg-gradient-to-br from-white/90 to-amber-50/90 backdrop-blur-sm shadow-xl border-amber-200">
+                <CardContent className="p-8 text-center">
+                  <div className="text-gray-500 mb-2">
+                    <Info className="h-12 w-12 mx-auto mb-3" />
                   </div>
+                  <h3 className="text-lg font-semibold text-gray-700 mb-2">선택한 조건에 맞는 교정사항이 없습니다</h3>
+                  <p className="text-gray-500">다른 필터 조건을 선택해보세요.</p>
                 </CardContent>
               </Card>
-            ))}
+            ) : (
+              filteredSuggestions.map((suggestion, index) => {
+                const originalIndex = analyzeResult?.suggestions.findIndex(s => 
+                  s.slideIndex === suggestion.slideIndex && 
+                  s.shapeId === suggestion.shapeId &&
+                  s.original === suggestion.original
+                ) || index;
+                
+                return (
+                  <Card 
+                    key={`${suggestion.slideIndex}-${suggestion.shapeId}-${index}`}
+                    className={`bg-gradient-to-br from-white/90 to-amber-50/90 backdrop-blur-sm shadow-xl transition-all duration-300 hover:-translate-y-1 hover:shadow-2xl ${
+                      selectedSuggestions.includes(originalIndex.toString()) ? 'ring-2 ring-amber-400 border-amber-300' : 'border-amber-200'
+                    }`}
+                  >
+                    <CardContent className="p-6">
+                      <div className="flex items-start gap-4">
+                        <Checkbox
+                          checked={selectedSuggestions.includes(originalIndex.toString())}
+                          onCheckedChange={() => toggleSuggestion(originalIndex.toString())}
+                          className="mt-1"
+                        />
+                        
+                        <div className="flex-1">
+                          <div className="flex items-center gap-2 mb-3">
+                            <span className={`inline-flex items-center gap-1 px-2 py-1 rounded-md text-xs font-medium border ${getSeverityColor(suggestion.severity)}`}>
+                              {getTypeIcon(suggestion.type)}
+                              {getTypeName(suggestion.type)}
+                            </span>
+                            <span className="text-sm text-gray-500">
+                              슬라이드 {suggestion.slideIndex}
+                            </span>
+                            <span className={`px-2 py-1 rounded text-xs ${
+                              suggestion.severity === 'critical' ? 'bg-red-100 text-red-700' :
+                              suggestion.severity === 'important' ? 'bg-orange-100 text-orange-700' :
+                              'bg-blue-100 text-blue-700'
+                            }`}>
+                              {getSeverityName(suggestion.severity)}
+                            </span>
+                          </div>
+                      
+                          <div className="space-y-2">
+                            <div className="flex items-center gap-4">
+                              <div className="flex-1">
+                                <div className="text-sm text-gray-600 mb-1">원본:</div>
+                                <div className="px-3 py-2 bg-red-50 border border-red-200 rounded-lg">
+                                  <span className="line-through text-red-700">{suggestion.original}</span>
+                                </div>
+                              </div>
+                              <div className="flex-1">
+                                <div className="text-sm text-gray-600 mb-1">수정:</div>
+                                <div className="px-3 py-2 bg-green-50 border border-green-200 rounded-lg">
+                                  <span className="text-green-700 font-medium">{suggestion.revised}</span>
+                                </div>
+                              </div>
+                            </div>
+                            <div className="text-sm text-gray-600 italic">
+                              💡 {suggestion.reason}
+                            </div>
+                          </div>
+                        </div>
+                      </div>
+                    </CardContent>
+                  </Card>
+                );
+              })
+            )}
           </div>
         </div>
       </div>
