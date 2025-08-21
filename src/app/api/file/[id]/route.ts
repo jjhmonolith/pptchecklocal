@@ -33,11 +33,34 @@ export async function GET(
     
     const fileData = FileStorage.get(id);
     
+    // 디버깅 정보 추가
+    console.log(`파일 조회 시도: ${id}`);
+    console.log(`저장된 파일 수: ${FileStorage.size()}`);
+    
     if (!fileData) {
+      // 파일이 없을 때 더 자세한 정보 제공
+      console.log(`파일을 찾을 수 없음: ${id}, 저장소 상태:`, {
+        storageSize: FileStorage.size(),
+        timestamp: new Date().toISOString()
+      });
+      
       return NextResponse.json(
-        { error: "파일을 찾을 수 없습니다." },
+        { 
+          error: "파일을 찾을 수 없습니다. 파일이 만료되었거나 서버가 재시작되었을 수 있습니다.",
+          debug: {
+            fileId: id,
+            storageSize: FileStorage.size(),
+            timestamp: new Date().toISOString()
+          }
+        },
         { status: 404 }
       );
+    }
+
+    // Blob URL인 경우 리다이렉트
+    if (fileData.data === 'blob' && fileData.blobUrl) {
+      console.log(`Blob URL로 리다이렉트: ${fileData.blobUrl}`);
+      return NextResponse.redirect(fileData.blobUrl);
     }
 
     // base64 데이터를 Buffer로 변환

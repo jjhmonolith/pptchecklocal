@@ -92,9 +92,34 @@ export async function POST(request: NextRequest) {
       
     } catch (error) {
       console.error("PPTX 수정 오류:", error);
+      
+      // 더 자세한 에러 분류
+      let errorMessage = "파일 수정 중 오류가 발생했습니다.";
+      let statusCode = 500;
+      
+      if (error instanceof Error) {
+        if (error.message.includes("404") || error.message.includes("Not Found")) {
+          errorMessage = "파일을 찾을 수 없습니다. 파일이 만료되었거나 서버가 재시작되었을 수 있습니다. 파일을 다시 업로드해 주세요.";
+          statusCode = 404;
+        } else if (error.message.includes("parse") || error.message.includes("URL")) {
+          errorMessage = "파일 URL이 올바르지 않습니다: " + error.message;
+          statusCode = 400;
+        } else {
+          errorMessage = "파일 수정 중 오류가 발생했습니다: " + error.message;
+        }
+      }
+      
       return NextResponse.json(
-        { error: "파일 수정 중 오류가 발생했습니다: " + (error instanceof Error ? error.message : "알 수 없는 오류") },
-        { status: 500 }
+        { 
+          error: errorMessage,
+          debug: {
+            originalError: error instanceof Error ? error.message : String(error),
+            timestamp: new Date().toISOString(),
+            fileUrl,
+            fileName
+          }
+        },
+        { status: statusCode }
       );
     }
 

@@ -69,6 +69,20 @@ export async function POST(request: NextRequest) {
       console.log(`파일 Blob 업로드 완료: ${file.name}, 크기: ${file.size} bytes`);
       console.log(`Blob URL: ${blob.url}`);
 
+      // Blob URL을 FileStorage에도 저장 (메타데이터로)
+      const fileData = {
+        id: filename,
+        filename: file.name,
+        size: file.size,
+        contentType: file.type,
+        data: 'blob', // Blob URL 표시
+        uploadedAt: new Date().toISOString(),
+        blobUrl: blob.url
+      };
+
+      const { FileStorage } = await import("@/lib/file-storage");
+      FileStorage.store(fileData);
+
       // 1시간 후 파일 삭제 예약 (별도 cleanup 함수에서 처리)
       // scheduleFileCleanup(blob.url, filename);
 

@@ -8,8 +8,9 @@ interface FileData {
   filename: string;
   size: number;
   contentType: string;
-  data: string; // base64 encoded
+  data: string; // base64 encoded or 'blob'
   uploadedAt: string;
+  blobUrl?: string; // Vercel Blob URL
 }
 
 // 전역 변수로 메모리 저장소 관리 (서버 재시작시 초기화됨)

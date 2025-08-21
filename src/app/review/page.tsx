@@ -381,6 +381,17 @@ function ReviewContent() {
 
       if (!response.ok) {
         const errorData = await response.json();
+        
+        // 404 오류인 경우 특별 처리
+        if (response.status === 404) {
+          alert(`파일을 찾을 수 없습니다.\n\n${errorData.error}\n\n파일을 다시 업로드하고 분석해 주세요.`);
+          // 업로드 페이지로 리디렉션
+          setTimeout(() => {
+            router.push('/upload');
+          }, 2000);
+          return;
+        }
+        
         throw new Error(errorData.error || '교정 적용 실패');
       }
 
