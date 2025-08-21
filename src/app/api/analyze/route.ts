@@ -135,8 +135,8 @@ export async function POST(request: NextRequest) {
         ],
         stats: { slides: 2, shapes: 3, runs: 8, tokensEstimated: 120 },
         debug: {
-          reason: "Python 스크립트 실행 실패",
-          pythonPath: pythonScriptPath,
+          reason: "PPTX 분석 실패",
+          parser: "Node.js JSZip",
           fileUrl: fileUrl,
           openaiKeyExists: !!process.env.OPENAI_API_KEY,
           error: error instanceof Error ? error.message : String(error)
