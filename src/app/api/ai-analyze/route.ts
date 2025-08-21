@@ -59,8 +59,9 @@ export async function POST(request: NextRequest) {
       } : null);
       
       // 텍스트 청크 단위로 나누어 병렬 처리
-      const chunks = await prepareTextChunks(pptxData, text);
+      const { chunks, originalStats } = await prepareTextChunks(pptxData, text);
       console.log(`텍스트를 ${chunks.length}개 청크로 분할, 병렬 처리 시작`);
+      console.log("원본 통계:", originalStats);
       
       if (chunks.length === 0) {
         throw new Error("분석할 텍스트가 없습니다.");
@@ -94,17 +95,18 @@ export async function POST(request: NextRequest) {
         })) || []
       );
 
-      // 실제 통계 계산 (pptxData가 있으면 우선 사용)
+      // 실제 통계 계산 (originalStats 우선 사용)
       let finalStats;
-      if (pptxData?.stats) {
-        finalStats = pptxData.stats;
-        console.log("PPTX 통계 사용:", finalStats);
+      if (originalStats) {
+        finalStats = originalStats;
+        console.log("원본 PPTX 통계 사용:", finalStats);
       } else {
-        // fallback: 청크 기반 추정
+        // fallback: 청크 기반 추정 - 실제 PPTX 구조 고려
+        const uniqueSlides = [...new Set(chunks.map(c => c.slideIndex))].length;
         const estimatedStats = {
-          slides: text ? 1 : Math.max(1, [...new Set(chunks.map(c => c.slideIndex))].length),
-          shapes: chunks.length,
-          runs: chunks.length,
+          slides: text ? 1 : Math.max(1, uniqueSlides),
+          shapes: text ? 1 : chunks.length * 2, // 슬라이드당 평균 2개 텍스트박스 추정
+          runs: text ? 1 : chunks.length * 3, // 텍스트박스당 평균 3개 텍스트런 추정
           tokensEstimated: chunks.reduce((sum, chunk) => sum + chunk.text.length, 0)
         };
         finalStats = estimatedStats;
@@ -160,7 +162,21 @@ async function prepareTextChunks(pptxData: {
       shapeId?: string;
     }>;
   }>;
-} | null, text?: string): Promise<TextChunk[]> {
+  stats?: {
+    slides: number;
+    shapes: number;
+    runs: number;
+    tokensEstimated: number;
+  };
+} | null, text?: string): Promise<{
+  chunks: TextChunk[];
+  originalStats?: {
+    slides: number;
+    shapes: number;
+    runs: number;
+    tokensEstimated: number;
+  };
+}> {
   const chunks: TextChunk[] = [];
   
   if (pptxData && pptxData.slides) {
@@ -194,6 +210,8 @@ async function prepareTextChunks(pptxData: {
         }
       }
     });
+    
+    return { chunks, originalStats: pptxData.stats };
   } else if (text) {
     // 단순 텍스트인 경우 적당한 길이로 나누기 (최대 1000자)
     const maxChunkSize = 1000;
@@ -224,9 +242,11 @@ async function prepareTextChunks(pptxData: {
         runPath: [chunkIndex, 0]
       });
     }
+    
+    return { chunks, originalStats: undefined };
   }
   
-  return chunks;
+  return { chunks: [], originalStats: undefined };
 }
 
 async function processTextChunk(chunk: TextChunk, apiKey: string, index: number) {

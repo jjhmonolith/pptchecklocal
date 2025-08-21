@@ -99,10 +99,11 @@ function ReviewContent() {
   const [selectedSuggestions, setSelectedSuggestions] = useState<string[]>([]);
   const [isApplying, setIsApplying] = useState(false);
   const [mousePosition, setMousePosition] = useState({ x: 0, y: 0 });
+  const [fileName, setFileName] = useState<string>('');
   
-  // 필터링 상태
-  const [filterType, setFilterType] = useState<string>('all');
-  const [filterSeverity, setFilterSeverity] = useState<string>('all');
+  // 필터링 상태 (복수 선택 가능)
+  const [filterTypes, setFilterTypes] = useState<string[]>(['all']);
+  const [filterSeverities, setFilterSeverities] = useState<string[]>(['all']);
   const [showFilters, setShowFilters] = useState(false);
   
   const router = useRouter();
@@ -118,6 +119,12 @@ function ReviewContent() {
 
     // 분석 결과 로드 (로컬 스토리지에서 또는 Mock 데이터)
     const savedResult = localStorage.getItem("analysisResult");
+    const savedFileName = localStorage.getItem("uploadedFileName");
+    
+    if (savedFileName) {
+      setFileName(savedFileName);
+    }
+    
     if (savedResult) {
       try {
         const parsedResult = JSON.parse(savedResult);
@@ -136,6 +143,7 @@ function ReviewContent() {
       // 저장된 결과가 없으면 Mock 데이터 사용
       setTimeout(() => {
         setAnalyzeResult(mockAnalyzeResult);
+        setFileName("샘플 프레젠테이션.pptx");
       }, 1000);
     }
   }, [router, searchParams]);
@@ -173,10 +181,47 @@ function ReviewContent() {
 
   // 필터링된 제안사항 계산
   const filteredSuggestions = analyzeResult?.suggestions.filter(suggestion => {
-    if (filterType !== 'all' && suggestion.type !== filterType) return false;
-    if (filterSeverity !== 'all' && suggestion.severity !== filterSeverity) return false;
+    // 유형 필터 (복수 선택)
+    if (!filterTypes.includes('all') && !filterTypes.includes(suggestion.type)) return false;
+    // 심각도 필터 (복수 선택)  
+    if (!filterSeverities.includes('all') && !filterSeverities.includes(suggestion.severity)) return false;
     return true;
   }) || [];
+
+  // 필터 체크박스 핸들러
+  const handleTypeFilterChange = (type: string, checked: boolean) => {
+    if (type === 'all') {
+      setFilterTypes(checked ? ['all'] : []);
+    } else {
+      setFilterTypes(prev => {
+        const newTypes = prev.filter(t => t !== 'all'); // 'all' 제거
+        if (checked) {
+          const updated = [...newTypes, type];
+          return updated.length === 6 ? ['all'] : updated; // 모든 항목 선택시 'all'로 변경
+        } else {
+          const updated = newTypes.filter(t => t !== type);
+          return updated.length === 0 ? ['all'] : updated; // 아무것도 선택안되면 'all'로 복원
+        }
+      });
+    }
+  };
+
+  const handleSeverityFilterChange = (severity: string, checked: boolean) => {
+    if (severity === 'all') {
+      setFilterSeverities(checked ? ['all'] : []);
+    } else {
+      setFilterSeverities(prev => {
+        const newSeverities = prev.filter(s => s !== 'all'); // 'all' 제거
+        if (checked) {
+          const updated = [...newSeverities, severity];
+          return updated.length === 3 ? ['all'] : updated; // 모든 항목 선택시 'all'로 변경
+        } else {
+          const updated = newSeverities.filter(s => s !== severity);
+          return updated.length === 0 ? ['all'] : updated; // 아무것도 선택안되면 'all'로 복원
+        }
+      });
+    }
+  };
 
   const getSeverityColor = (severity: string) => {
     switch (severity) {
@@ -277,9 +322,16 @@ function ReviewContent() {
               <div className="absolute inset-0 blur-lg bg-gradient-to-r from-amber-400 to-orange-400 opacity-40 animate-pulse" />
               <FileText className="h-8 w-8 text-amber-500 relative" />
             </div>
-            <h1 className="text-2xl font-bold bg-gradient-to-r from-amber-600 to-orange-500 bg-clip-text text-transparent">
-              맞춤법 검사 결과
-            </h1>
+            <div>
+              <h1 className="text-2xl font-bold bg-gradient-to-r from-amber-600 to-orange-500 bg-clip-text text-transparent">
+                맞춤법 검사 결과
+              </h1>
+              {fileName && (
+                <p className="text-sm text-gray-600 mt-1">
+                  📄 {fileName}
+                </p>
+              )}
+            </div>
           </div>
           <div className="flex items-center gap-3">
             <Link href="/upload">
@@ -386,35 +438,49 @@ function ReviewContent() {
 
               {/* 필터 옵션 */}
               {showFilters && (
-                <div className="border-t pt-4 grid grid-cols-1 md:grid-cols-2 gap-4">
+                <div className="border-t pt-4 grid grid-cols-1 md:grid-cols-2 gap-6">
                   <div>
-                    <label className="text-sm font-medium text-gray-700 mb-2 block">교정 유형</label>
-                    <select 
-                      value={filterType} 
-                      onChange={(e) => setFilterType(e.target.value)}
-                      className="w-full px-3 py-2 border border-amber-200 rounded-lg focus:ring-2 focus:ring-amber-300 focus:border-transparent"
-                    >
-                      <option value="all">전체</option>
-                      <option value="spelling">맞춤법</option>
-                      <option value="spacing">띄어쓰기</option>
-                      <option value="punctuation">문장부호</option>
-                      <option value="grammar">문법</option>
-                      <option value="long_sentence">긴문장</option>
-                      <option value="expression">표현개선</option>
-                    </select>
+                    <label className="text-sm font-medium text-gray-700 mb-3 block">교정 유형 (복수 선택)</label>
+                    <div className="space-y-2">
+                      {[
+                        { value: 'all', label: '전체' },
+                        { value: 'spelling', label: '맞춤법' },
+                        { value: 'spacing', label: '띄어쓰기' },
+                        { value: 'punctuation', label: '문장부호' },
+                        { value: 'grammar', label: '문법' },
+                        { value: 'long_sentence', label: '긴문장' },
+                        { value: 'expression', label: '표현개선' }
+                      ].map(option => (
+                        <div key={option.value} className="flex items-center space-x-2">
+                          <Checkbox
+                            checked={filterTypes.includes(option.value)}
+                            onCheckedChange={(checked) => handleTypeFilterChange(option.value, !!checked)}
+                            className="border-amber-300"
+                          />
+                          <label className="text-sm text-gray-700">{option.label}</label>
+                        </div>
+                      ))}
+                    </div>
                   </div>
                   <div>
-                    <label className="text-sm font-medium text-gray-700 mb-2 block">중요도</label>
-                    <select 
-                      value={filterSeverity} 
-                      onChange={(e) => setFilterSeverity(e.target.value)}
-                      className="w-full px-3 py-2 border border-amber-200 rounded-lg focus:ring-2 focus:ring-amber-300 focus:border-transparent"
-                    >
-                      <option value="all">전체</option>
-                      <option value="critical">필수 (반드시 수정)</option>
-                      <option value="important">권장 (수정 권장)</option>
-                      <option value="minor">선택 (선택적 수정)</option>
-                    </select>
+                    <label className="text-sm font-medium text-gray-700 mb-3 block">중요도 (복수 선택)</label>
+                    <div className="space-y-2">
+                      {[
+                        { value: 'all', label: '전체' },
+                        { value: 'critical', label: '필수 (반드시 수정)' },
+                        { value: 'important', label: '권장 (수정 권장)' },
+                        { value: 'minor', label: '선택 (선택적 수정)' }
+                      ].map(option => (
+                        <div key={option.value} className="flex items-center space-x-2">
+                          <Checkbox
+                            checked={filterSeverities.includes(option.value)}
+                            onCheckedChange={(checked) => handleSeverityFilterChange(option.value, !!checked)}
+                            className="border-amber-300"
+                          />
+                          <label className="text-sm text-gray-700">{option.label}</label>
+                        </div>
+                      ))}
+                    </div>
                   </div>
                 </div>
               )}
@@ -479,7 +545,7 @@ function ReviewContent() {
                               <div className="flex-1">
                                 <div className="text-sm text-gray-600 mb-1">원본:</div>
                                 <div className="px-3 py-2 bg-red-50 border border-red-200 rounded-lg">
-                                  <span className="line-through text-red-700">{suggestion.original}</span>
+                                  <span className="text-red-700">{suggestion.original}</span>
                                 </div>
                               </div>
                               <div className="flex-1">

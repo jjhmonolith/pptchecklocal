@@ -217,6 +217,11 @@ export default function UploadPage() {
       // 분석 결과를 로컬 스토리지에 저장 (리뷰 페이지에서 사용)
       localStorage.setItem('analysisResult', JSON.stringify(result));
       
+      // 파일명도 저장 (리뷰 페이지에서 표시용)
+      if (uploadedFilesList[0].file?.name) {
+        localStorage.setItem('uploadedFileName', uploadedFilesList[0].file.name);
+      }
+      
       // 리뷰 페이지로 이동
       router.push('/review');
     } catch (error) {
