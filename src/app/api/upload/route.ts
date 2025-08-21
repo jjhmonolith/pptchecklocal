@@ -1,5 +1,4 @@
 import { NextRequest, NextResponse } from "next/server";
-import { put } from "@vercel/blob";
 import { verify } from "jsonwebtoken";
 
 const JWT_SECRET = process.env.JWT_SECRET || "ppt-spell-checker-secret-key-2024";
@@ -52,21 +51,20 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    // 파일명 생성 (타임스탬프 + 원본명)
+    // 임시로 파일 정보만 반환 (실제 저장 없이 테스트용)
     const timestamp = Date.now();
     const filename = `${timestamp}-${file.name}`;
-
-    // Vercel Blob에 업로드
-    const blob = await put(filename, file, {
-      access: 'public',
-    });
+    
+    // 임시 URL 생성 (실제로는 저장되지 않음)
+    const mockUrl = `https://mock-storage.example.com/${filename}`;
 
     return NextResponse.json({
-      message: "파일 업로드 성공",
-      url: blob.url,
+      message: "파일 업로드 성공 (테스트 모드)",
+      url: mockUrl,
       filename: filename,
       size: file.size,
       type: file.type,
+      note: "Vercel Blob 설정 전 임시 모드입니다."
     });
 
   } catch (error) {
