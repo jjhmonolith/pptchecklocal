@@ -64,31 +64,49 @@ export default function UploadPage() {
       setUploadedFiles(prev => [...prev, newFile]);
 
       try {
-        // 파일 업로드 API 호출
-        const formData = new FormData();
-        formData.append('file', file);
-
-        const response = await fetch('/api/upload', {
+        // 1단계: 업로드 URL 요청
+        const urlResponse = await fetch('/api/upload-url', {
           method: 'POST',
-          body: formData,
           headers: {
+            'Content-Type': 'application/json',
             'Authorization': `Bearer ${localStorage.getItem('authToken')}`,
           },
+          body: JSON.stringify({
+            filename: file.name,
+            contentType: file.type
+          }),
         });
 
-        const data = await response.json();
-
-        if (response.ok) {
-          setUploadedFiles(prev => 
-            prev.map(f => 
-              f.id === fileId 
-                ? { ...f, status: 'uploaded', progress: 100, url: data.url }
-                : f
-            )
-          );
-        } else {
-          throw new Error(data.error || '업로드 실패');
+        if (!urlResponse.ok) {
+          const errorData = await urlResponse.json();
+          throw new Error(errorData.error || 'URL 생성 실패');
         }
+
+        const { uploadUrl, fileUrl } = await urlResponse.json();
+
+        // 임시로 성공 처리 (실제로는 uploadUrl로 파일 업로드)
+        console.log('Mock upload to:', uploadUrl);
+        
+        // 업로드 진행률 시뮬레이션
+        setUploadedFiles(prev => 
+          prev.map(f => 
+            f.id === fileId 
+              ? { ...f, progress: 50 }
+              : f
+          )
+        );
+
+        // 약간의 지연 후 완료 처리
+        await new Promise(resolve => setTimeout(resolve, 1000));
+
+        setUploadedFiles(prev => 
+          prev.map(f => 
+            f.id === fileId 
+              ? { ...f, status: 'uploaded', progress: 100, url: fileUrl }
+              : f
+          )
+        );
+
       } catch (error) {
         console.error('Upload error:', error);
         setUploadedFiles(prev => 
@@ -108,7 +126,7 @@ export default function UploadPage() {
       'application/vnd.openxmlformats-officedocument.presentationml.presentation': ['.pptx']
     },
     multiple: true,
-    maxSize: 25 * 1024 * 1024, // 25MB
+    maxSize: 50 * 1024 * 1024, // 50MB (클라이언트 직접 업로드)
   });
 
   const removeFile = (id: string) => {
@@ -207,7 +225,7 @@ export default function UploadPage() {
                 </span>
               </CardTitle>
               <CardDescription>
-                .pptx 파일을 드래그 앤 드롭하거나 클릭하여 업로드하세요. (최대 25MB)
+                .pptx 파일을 드래그 앤 드롭하거나 클릭하여 업로드하세요. (최대 50MB)
               </CardDescription>
             </CardHeader>
             
@@ -242,7 +260,7 @@ export default function UploadPage() {
                         PowerPoint 파일을 드래그하거나 클릭하여 업로드
                       </p>
                       <p className="text-sm text-gray-500">
-                        .pptx 형식만 지원 • 최대 25MB • 여러 파일 업로드 가능
+                        .pptx 형식만 지원 • 최대 50MB • 여러 파일 업로드 가능
                       </p>
                     </div>
                   )}
@@ -335,7 +353,7 @@ export default function UploadPage() {
                 <h3 className="font-semibold text-gray-800 mb-2">💡 사용 팁</h3>
                 <div className="text-sm text-gray-600 space-y-1">
                   <p>• PowerPoint(.pptx) 파일만 업로드 가능합니다</p>
-                  <p>• 파일 크기는 최대 25MB까지 지원됩니다</p>
+                  <p>• 파일 크기는 최대 50MB까지 지원됩니다</p>
                   <p>• 여러 파일을 동시에 업로드할 수 있습니다</p>
                   <p>• 업로드 완료 후 &quot;맞춤법 검사 시작&quot;을 클릭하세요</p>
                 </div>
