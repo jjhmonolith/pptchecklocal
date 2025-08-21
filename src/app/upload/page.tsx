@@ -160,7 +160,14 @@ export default function UploadPage() {
             throw new Error(errorData.error || '파일 업로드 실패');
           }
 
-          const { fileUrl } = await uploadResponse.json();
+          const uploadResult = await uploadResponse.json();
+          const { fileUrl, fileData } = uploadResult;
+          
+          // localStorage에 파일 데이터 저장
+          if (fileData) {
+            localStorage.setItem(`file_${fileId}`, fileData);
+          }
+          
           console.log('일반 업로드 완료:', fileUrl);
 
           // 완료 처리

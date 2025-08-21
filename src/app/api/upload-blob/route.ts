@@ -61,6 +61,11 @@ export async function POST(request: NextRequest) {
       const timestamp = Date.now();
       const filename = `pptx_${timestamp}_${file.name}`;
       
+      // 파일을 Base64로도 변환 (클라이언트에서 사용)
+      const arrayBuffer = await file.arrayBuffer();
+      const buffer = Buffer.from(arrayBuffer);
+      const base64Data = buffer.toString('base64');
+      
       const blob = await put(filename, file, {
         access: 'public',
         // 1시간 후 자동 삭제 설정은 별도 구현 필요
@@ -78,6 +83,7 @@ export async function POST(request: NextRequest) {
         fileUrl: blob.url,
         filename: file.name,
         size: file.size,
+        fileData: base64Data, // Base64 데이터도 응답에 포함
         message: "파일 업로드가 완료되었습니다."
       });
 
@@ -112,6 +118,7 @@ export async function POST(request: NextRequest) {
         fileUrl,
         filename: file.name,
         size: file.size,
+        fileData: base64Data, // Base64 데이터도 응답에 포함
         message: "파일 업로드가 완료되었습니다 (메모리 저장소)."
       });
     }

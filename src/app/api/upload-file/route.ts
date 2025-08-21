@@ -97,6 +97,7 @@ export async function POST(request: NextRequest) {
       fileUrl,
       filename: file.name,
       size: file.size,
+      fileData: base64Data, // Base64 데이터도 응답에 포함
       message: "파일 업로드가 완료되었습니다."
     });
 

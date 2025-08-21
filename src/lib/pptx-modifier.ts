@@ -19,6 +19,32 @@ export interface Correction {
 export class PPTXModifier {
   
   /**
+   * Buffer에서 직접 PPTX 파일을 처리하고 교정사항을 적용
+   */
+  static async applyCorrectionsFromBuffer(buffer: Buffer, corrections: Correction[]): Promise<ArrayBuffer> {
+    console.log('Buffer에서 PPTX 파일 처리 시작, 크기:', buffer.byteLength, 'bytes');
+    
+    try {
+      // ZIP 파일로 읽기
+      const zip = await JSZip.loadAsync(buffer);
+      console.log('ZIP 파일 로드 완료');
+      
+      // 교정사항 적용
+      await this.applyCorrectionsToZip(zip, corrections);
+      
+      // 수정된 ZIP 파일 생성
+      const modifiedBuffer = await zip.generateAsync({ type: 'arraybuffer' });
+      console.log('수정된 PPTX 파일 생성 완료, 크기:', modifiedBuffer.byteLength, 'bytes');
+      
+      return modifiedBuffer;
+      
+    } catch (error) {
+      console.error('PPTX 수정 오류:', error);
+      throw error;
+    }
+  }
+  
+  /**
    * URL에서 PPTX 파일을 다운로드하고 교정사항을 적용하여 새 파일 생성
    */
   static async applyCorrections(fileUrl: string, corrections: Correction[], authToken?: string): Promise<ArrayBuffer> {
