@@ -93,8 +93,7 @@ export default function AuthPage() {
               </CardTitle>
               <CardDescription className="text-gray-600">
                 PPT 맞춤법 검사기에 오신 것을 환영합니다!<br />
-                계속하려면 패스워드를 입력해주세요.<br />
-                <span className="text-amber-600 font-medium text-sm">패스워드: ppt-checker-2024</span>
+                계속하려면 패스워드를 입력해주세요.
               </CardDescription>
             </CardHeader>
 

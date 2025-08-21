@@ -40,21 +40,37 @@ npm run dev
 
 ## 📝 환경 변수
 
+### 로컬 개발 환경
 `.env.local` 파일에 다음 환경 변수를 설정하세요:
 
 ```
 # 인증
 AUTH_PASSWORD=your-password
+JWT_SECRET=your-jwt-secret-key
 
-# AI
-ANTHROPIC_API_KEY=your-anthropic-api-key
+# AI (선택사항)
+# ANTHROPIC_API_KEY=your-anthropic-api-key
 
-# Storage
-BLOB_READ_WRITE_TOKEN=your-vercel-blob-token
+# Storage (선택사항)
+# BLOB_READ_WRITE_TOKEN=your-vercel-blob-token
 
-# Database
-POSTGRES_URL=your-postgres-url
+# Database (선택사항)
+# POSTGRES_URL=your-postgres-url
 ```
+
+### Vercel 배포 환경
+Vercel 대시보드에서 환경변수를 설정하세요:
+
+1. **Vercel 대시보드** → 프로젝트 선택
+2. **Settings** → **Environment Variables**
+3. 다음 변수들을 추가:
+   - `AUTH_PASSWORD`: 로그인 패스워드
+   - `JWT_SECRET`: JWT 토큰 암호화 키
+   - `BLOB_READ_WRITE_TOKEN`: Vercel Blob 토큰 (파일 업로드용)
+
+### 필수 환경변수
+- `AUTH_PASSWORD`: 애플리케이션 접근 패스워드
+- `JWT_SECRET`: JWT 토큰 서명용 비밀키
 
 ## 🚀 배포
 
