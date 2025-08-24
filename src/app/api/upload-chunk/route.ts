@@ -1,6 +1,8 @@
 import { NextRequest, NextResponse } from "next/server";
 import { verify } from "jsonwebtoken";
 import { FileStorage } from "@/lib/file-storage";
+import fs from "fs/promises";
+import path from "path";
 
 const JWT_SECRET = process.env.JWT_SECRET || "ppt-spell-checker-secret-key-2024-super-secure";
 const FALLBACK_JWT_SECRET = "ppt-spell-checker-secret-key-2024-super-secure";
@@ -134,8 +136,6 @@ export async function POST(request: NextRequest) {
           // 메타데이터만 저장 (파일은 이미 존재)
           const loadMetadata = async () => {
             try {
-              const fs = require('fs').promises;
-              const path = require('path');
               const METADATA_FILE = path.join(process.cwd(), 'file-metadata.json');
               const data = await fs.readFile(METADATA_FILE, 'utf8');
               const parsed = JSON.parse(data);
@@ -145,9 +145,13 @@ export async function POST(request: NextRequest) {
             }
           };
           
-          const saveMetadata = async (metadata: Map<string, any>) => {
-            const fs = require('fs').promises;
-            const path = require('path');
+          interface FileMetadata {
+            filename: string;
+            uploadDate: string;
+            size: number;
+          }
+          
+          const saveMetadata = async (metadata: Map<string, FileMetadata>) => {
             const METADATA_FILE = path.join(process.cwd(), 'file-metadata.json');
             const obj = Object.fromEntries(metadata.entries());
             await fs.writeFile(METADATA_FILE, JSON.stringify(obj, null, 2));

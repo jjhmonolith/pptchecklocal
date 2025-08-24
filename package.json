@@ -9,6 +9,13 @@
     "lint": "eslint",
     "setup": "node scripts/setup.js",
     "cleanup": "node scripts/cleanup.js",
+    "service:start": "bash scripts/start-service.sh",
+    "service:stop": "bash scripts/stop-service.sh",
+    "service:restart": "bash scripts/restart-service.sh",
+    "service:health": "bash scripts/health-check.sh",
+    "service:install": "bash scripts/install-service.sh",
+    "service:uninstall": "bash scripts/uninstall-service.sh",
+    "service:status": "bash scripts/status-service.sh",
     "python:install": "cd python && pip install -r requirements.txt",
     "python:test": "cd python && python3 pptx_analyzer.py https://mock-test.example.com/test.pptx",
     "ai:test": "cd python && python3 ai_spell_checker.py '안녕 하세요. 프레젠테이숀을 시작하겠읍니다.' your-api-key-here"

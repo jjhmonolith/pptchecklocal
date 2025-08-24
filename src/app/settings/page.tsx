@@ -23,7 +23,7 @@ interface ConfigStatus {
     platform: string;
     pid: number;
     uptime: number;
-    memoryUsage: any;
+    memoryUsage: NodeJS.MemoryUsage;
   };
   error?: string;
 }

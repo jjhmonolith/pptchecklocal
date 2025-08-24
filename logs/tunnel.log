@@ -1,0 +1,41 @@
+2025-08-24T15:40:54Z INF Starting tunnel tunnelID=ae9aac1d-ab6c-4b8a-9134-4bc60605b0fc
+2025-08-24T15:40:54Z INF Version 2025.8.0 (Checksum 387e5cb88e0f2db5f30bfd7639206bad63a49ba530661f3b3e98c60569938ce3)
+2025-08-24T15:40:54Z INF GOOS: darwin, GOVersion: go1.24.6, GoArch: arm64
+2025-08-24T15:40:54Z INF Settings: map[cred-file:/Users/jjh_server/.cloudflared/ae9aac1d-ab6c-4b8a-9134-4bc60605b0fc.json credentials-file:/Users/jjh_server/.cloudflared/ae9aac1d-ab6c-4b8a-9134-4bc60605b0fc.json url:http://localhost:3333]
+2025-08-24T15:40:54Z INF cloudflared will not automatically update if installed by a package manager.
+2025-08-24T15:40:54Z INF Generated Connector ID: 7d08c663-dc82-42fa-af3f-2fa703083da4
+2025-08-24T15:40:54Z INF Initial protocol quic
+2025-08-24T15:40:54Z INF ICMP proxy will use 192.168.1.116 as source for IPv4
+2025-08-24T15:40:54Z INF ICMP proxy will use fe80::1438:d542:789a:99d0 in zone en1 as source for IPv6
+2025-08-24T15:40:54Z INF Created ICMP proxy listening on 192.168.1.116:0
+2025-08-24T15:40:54Z INF ICMP proxy will use 192.168.1.116 as source for IPv4
+2025-08-24T15:40:54Z INF ICMP proxy will use fe80::1438:d542:789a:99d0 in zone en1 as source for IPv6
+2025-08-24T15:40:54Z INF Starting metrics server on 127.0.0.1:20243/metrics
+2025-08-24T15:40:54Z INF Tunnel connection curve preferences: [X25519MLKEM768 CurveP256] connIndex=0 event=0 ip=198.41.200.33
+2025-08-24T15:40:55Z INF Registered tunnel connection connIndex=0 connection=f50d4d16-0978-4269-9455-56acf78a5deb event=0 ip=198.41.200.33 location=icn01 protocol=quic
+2025-08-24T15:40:55Z INF Tunnel connection curve preferences: [X25519MLKEM768 CurveP256] connIndex=1 event=0 ip=198.41.192.27
+2025-08-24T15:40:55Z INF Registered tunnel connection connIndex=1 connection=66f2be25-1f95-4074-ab21-835a729e1d09 event=0 ip=198.41.192.27 location=icn06 protocol=quic
+2025-08-24T15:40:56Z INF Tunnel connection curve preferences: [X25519MLKEM768 CurveP256] connIndex=2 event=0 ip=198.41.200.63
+2025-08-24T15:40:56Z INF Registered tunnel connection connIndex=2 connection=970bfaa0-bef3-4f30-9ab8-a2743e7473dc event=0 ip=198.41.200.63 location=icn01 protocol=quic
+2025-08-24T15:40:57Z INF Tunnel connection curve preferences: [X25519MLKEM768 CurveP256] connIndex=3 event=0 ip=198.41.192.77
+2025-08-24T15:40:57Z INF Registered tunnel connection connIndex=3 connection=6acc0885-5d6e-496e-b7e5-49fb98aa100c event=0 ip=198.41.192.77 location=icn06 protocol=quic
+2025-08-24T15:46:49Z ERR  error="Unable to reach the origin service. The service may be down or it may not be responding to traffic from cloudflared: dial tcp [::1]:3333: connect: connection refused" connIndex=0 event=1 ingressRule=0 originService=http://localhost:3333
+2025-08-24T15:46:49Z ERR Request failed error="Unable to reach the origin service. The service may be down or it may not be responding to traffic from cloudflared: dial tcp [::1]:3333: connect: connection refused" connIndex=0 dest=https://pptcheck.llmclass.org/ event=0 ip=198.41.200.33 type=http
+2025-08-24T15:46:49Z ERR  error="Unable to reach the origin service. The service may be down or it may not be responding to traffic from cloudflared: dial tcp [::1]:3333: connect: connection refused" connIndex=2 event=1 ingressRule=0 originService=http://localhost:3333
+2025-08-24T15:46:49Z ERR Request failed error="Unable to reach the origin service. The service may be down or it may not be responding to traffic from cloudflared: dial tcp [::1]:3333: connect: connection refused" connIndex=2 dest=https://pptcheck.llmclass.org/favicon.ico event=0 ip=198.41.200.63 type=http
+2025-08-24T15:46:50Z ERR  error="Unable to reach the origin service. The service may be down or it may not be responding to traffic from cloudflared: dial tcp [::1]:3333: connect: connection refused" connIndex=0 event=1 ingressRule=0 originService=http://localhost:3333
+2025-08-24T15:46:50Z ERR Request failed error="Unable to reach the origin service. The service may be down or it may not be responding to traffic from cloudflared: dial tcp [::1]:3333: connect: connection refused" connIndex=0 dest=https://pptcheck.llmclass.org/ event=0 ip=198.41.200.33 type=http
+2025-08-24T15:46:50Z ERR  error="Unable to reach the origin service. The service may be down or it may not be responding to traffic from cloudflared: dial tcp [::1]:3333: connect: connection refused" connIndex=2 event=1 ingressRule=0 originService=http://localhost:3333
+2025-08-24T15:46:50Z ERR Request failed error="Unable to reach the origin service. The service may be down or it may not be responding to traffic from cloudflared: dial tcp [::1]:3333: connect: connection refused" connIndex=2 dest=https://pptcheck.llmclass.org/favicon.ico event=0 ip=198.41.200.63 type=http
+2025-08-24T15:46:51Z ERR  error="Unable to reach the origin service. The service may be down or it may not be responding to traffic from cloudflared: dial tcp [::1]:3333: connect: connection refused" connIndex=0 event=1 ingressRule=0 originService=http://localhost:3333
+2025-08-24T15:46:51Z ERR Request failed error="Unable to reach the origin service. The service may be down or it may not be responding to traffic from cloudflared: dial tcp [::1]:3333: connect: connection refused" connIndex=0 dest=https://pptcheck.llmclass.org/ event=0 ip=198.41.200.33 type=http
+2025-08-24T15:46:51Z ERR  error="Unable to reach the origin service. The service may be down or it may not be responding to traffic from cloudflared: dial tcp [::1]:3333: connect: connection refused" connIndex=3 event=1 ingressRule=0 originService=http://localhost:3333
+2025-08-24T15:46:51Z ERR Request failed error="Unable to reach the origin service. The service may be down or it may not be responding to traffic from cloudflared: dial tcp [::1]:3333: connect: connection refused" connIndex=3 dest=https://pptcheck.llmclass.org/favicon.ico event=0 ip=198.41.192.77 type=http
+2025-08-24T15:46:52Z ERR  error="Unable to reach the origin service. The service may be down or it may not be responding to traffic from cloudflared: dial tcp [::1]:3333: connect: connection refused" connIndex=0 event=1 ingressRule=0 originService=http://localhost:3333
+2025-08-24T15:46:52Z ERR Request failed error="Unable to reach the origin service. The service may be down or it may not be responding to traffic from cloudflared: dial tcp [::1]:3333: connect: connection refused" connIndex=0 dest=https://pptcheck.llmclass.org/ event=0 ip=198.41.200.33 type=http
+2025-08-24T15:46:53Z ERR  error="Unable to reach the origin service. The service may be down or it may not be responding to traffic from cloudflared: dial tcp [::1]:3333: connect: connection refused" connIndex=3 event=1 ingressRule=0 originService=http://localhost:3333
+2025-08-24T15:46:53Z ERR Request failed error="Unable to reach the origin service. The service may be down or it may not be responding to traffic from cloudflared: dial tcp [::1]:3333: connect: connection refused" connIndex=3 dest=https://pptcheck.llmclass.org/favicon.ico event=0 ip=198.41.192.77 type=http
+2025-08-24T15:53:12Z ERR  error="Unable to reach the origin service. The service may be down or it may not be responding to traffic from cloudflared: dial tcp [::1]:3333: connect: connection refused" connIndex=1 event=1 ingressRule=0 originService=http://localhost:3333
+2025-08-24T15:53:12Z ERR Request failed error="Unable to reach the origin service. The service may be down or it may not be responding to traffic from cloudflared: dial tcp [::1]:3333: connect: connection refused" connIndex=1 dest=https://pptcheck.llmclass.org/review event=0 ip=198.41.192.27 type=http
+2025-08-24T15:53:12Z ERR  error="Unable to reach the origin service. The service may be down or it may not be responding to traffic from cloudflared: dial tcp [::1]:3333: connect: connection refused" connIndex=2 event=1 ingressRule=0 originService=http://localhost:3333
+2025-08-24T15:53:12Z ERR Request failed error="Unable to reach the origin service. The service may be down or it may not be responding to traffic from cloudflared: dial tcp [::1]:3333: connect: connection refused" connIndex=2 dest=https://pptcheck.llmclass.org/favicon.ico event=0 ip=198.41.200.63 type=http

@@ -1,6 +1,6 @@
 "use client";
 
-import { FileText, Shield, CheckCircle, Download, Sparkles, ArrowRight, Zap, Heart, Settings } from "lucide-react";
+import { FileText, Shield, CheckCircle, Download, Sparkles, ArrowRight, Zap, Heart } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import Link from "next/link";
@@ -28,20 +28,6 @@ export default function Home() {
       />
       
       <div className="container mx-auto px-4 py-16 relative z-10">
-        {/* Settings Button */}
-        <div className="absolute top-8 right-8 z-20">
-          <Link href="/settings">
-            <Button
-              variant="outline"
-              size="sm"
-              className="bg-white/80 backdrop-blur-sm hover:bg-white/90 border-amber-200 hover:border-amber-300 text-gray-700 hover:text-gray-900 shadow-lg"
-            >
-              <Settings className="h-4 w-4 mr-2" />
-              설정
-            </Button>
-          </Link>
-        </div>
-        
         {/* Hero Section */}
         <div className="text-center mb-20">
           <div className="inline-flex items-center gap-2 px-4 py-2 rounded-full bg-amber-100 text-amber-800 text-sm font-medium mb-8 animate-pulse">
@@ -139,9 +125,6 @@ export default function Home() {
               </Button>
             </Link>
           </div>
-          <p className="mt-6 text-gray-500">
-            완전 무료! 회원가입 없이 바로 사용 가능합니다
-          </p>
         </div>
 
         {/* How to Use */}

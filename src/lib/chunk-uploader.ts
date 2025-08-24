@@ -13,6 +13,7 @@ export interface ChunkUploadOptions {
 
 export interface ChunkUploadResult {
   success: boolean;
+  fileId?: string;
   fileUrl?: string;
   filename?: string;
   size?: number;

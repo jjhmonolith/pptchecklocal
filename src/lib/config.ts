@@ -42,22 +42,22 @@ interface AppConfig {
   };
 }
 
-// 기본값
-const defaultConfig: Partial<AppConfig> = {
-  server: {
-    port: 3333,
-    nodeEnv: 'development',
-    baseUrl: 'http://localhost:3333'
-  },
-  files: {
-    maxSize: 50 * 1024 * 1024, // 50MB
-    cleanupInterval: 24 * 60 * 60 * 1000, // 24시간
-    uploadTimeout: 30 * 1000 // 30초
-  },
-  logging: {
-    level: 'info'
-  }
-};
+// 기본값 (현재 사용되지 않음 - 환경변수로 직접 설정)
+// const defaultConfig: Partial<AppConfig> = {
+//   server: {
+//     port: 3333,
+//     nodeEnv: 'development',
+//     baseUrl: 'http://localhost:3333'
+//   },
+//   files: {
+//     maxSize: 50 * 1024 * 1024, // 50MB
+//     cleanupInterval: 24 * 60 * 60 * 1000, // 24시간
+//     uploadTimeout: 30 * 1000 // 30초
+//   },
+//   logging: {
+//     level: 'info'
+//   }
+// };
 
 // 환경변수 파싱 유틸리티
 const parseSize = (sizeStr: string): number => {

@@ -269,7 +269,7 @@ export async function POST(request: NextRequest) {
             terminatedPids: pids
           });
           
-        } catch (error) {
+        } catch {
           return NextResponse.json({
             success: true,
             message: "종료할 터널 프로세스가 없습니다."

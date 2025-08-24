@@ -31,7 +31,7 @@ export async function GET(
       );
     }
     
-    const fileData = FileStorage.get(id);
+    const fileData = await FileStorage.get(id);
     
     // 디버깅 정보 추가
     console.log(`파일 조회 시도: ${id}`);
@@ -57,17 +57,18 @@ export async function GET(
       );
     }
 
-    // Blob URL인 경우 리다이렉트
-    if (fileData.data === 'blob' && fileData.blobUrl) {
-      console.log(`Blob URL로 리다이렉트: ${fileData.blobUrl}`);
-      return NextResponse.redirect(fileData.blobUrl);
+    // 파일 읽기
+    const buffer = await FileStorage.readFile(id);
+    
+    if (!buffer) {
+      return NextResponse.json(
+        { error: "파일을 읽을 수 없습니다." },
+        { status: 500 }
+      );
     }
 
-    // base64 데이터를 Buffer로 변환
-    const buffer = Buffer.from(fileData.data, 'base64');
-
     // 파일 응답 반환
-    return new NextResponse(buffer, {
+    return new NextResponse(new Uint8Array(buffer), {
       headers: {
         'Content-Type': fileData.contentType,
         'Content-Disposition': `attachment; filename="${encodeURIComponent(fileData.filename)}"`,

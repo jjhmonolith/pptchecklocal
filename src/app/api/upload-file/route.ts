@@ -78,13 +78,13 @@ export async function POST(request: NextRequest) {
       filename: file.name,
       size: file.size,
       contentType: file.type,
-      data: base64Data,
-      uploadedAt: new Date().toISOString()
+      uploadedAt: new Date().toISOString(),
+      status: 'complete' as const
     };
 
     // 파일 저장소에 저장
     const { FileStorage } = await import("@/lib/file-storage");
-    FileStorage.store(fileData);
+    await FileStorage.store(fileData, Buffer.from(base64Data, 'base64'));
 
     // 파일 URL 생성
     const fileUrl = `${process.env.NEXTJS_URL || request.nextUrl.origin}/api/file/${fileId}`;

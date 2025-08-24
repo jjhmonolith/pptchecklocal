@@ -73,7 +73,7 @@ export class PPTXParser {
       const arrayBuffer = buffer.buffer.slice(buffer.byteOffset, buffer.byteOffset + buffer.byteLength);
       console.log('ArrayBuffer 변환 완료, 크기:', arrayBuffer.byteLength, 'bytes');
       
-      return await this.analyzeBuffer(arrayBuffer);
+      return await this.analyzeBuffer(arrayBuffer as ArrayBuffer);
       
     } catch (error) {
       console.error('PPTX 버퍼 분석 오류:', error);

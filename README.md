@@ -113,6 +113,41 @@ pptchecklocal/
 - `.env.local`에서 `PORT` 값을 다른 포트로 변경
 - 또는 `PORT=다른포트 npm run dev` 실행
 
+## 🔧 시스템 서비스 관리
+
+### 자동 시작 서비스 설치
+```bash
+npm run service:install
+```
+
+### 서비스 관리 명령어
+```bash
+npm run service:status    # 서비스 상태 확인
+npm run service:restart   # 서비스 재시작
+npm run service:stop      # 서비스 정지
+npm run service:health    # 헬스체크 실행
+npm run service:uninstall # 서비스 제거
+```
+
+### 특징
+- 🔄 **자동 재시작**: 서비스 실패 시 자동으로 재시작
+- 🔍 **헬스체크**: 5분마다 서비스 상태 점검 및 자동 복구
+- 📝 **로그 관리**: 자동 로그 로테이션 (매일 새벽 2시)
+- 🚀 **부팅 시 시작**: 시스템 재부팅 후 자동으로 서비스 시작
+- 📊 **상태 모니터링**: 실시간 서비스 상태 확인
+
+### 로그 확인
+```bash
+# 서비스 로그
+tail -f logs/service.log
+
+# 애플리케이션 로그  
+tail -f logs/app.log
+
+# 터널 로그
+tail -f logs/tunnel.log
+```
+
 ## 📝 라이선스
 
 MIT License

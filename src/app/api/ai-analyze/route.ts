@@ -268,6 +268,7 @@ async function processTextChunk(chunk: TextChunk, apiKey: string, index: number)
 1. **맞춤법 (spelling)**: 국립국어원 표준 맞춤법 기준
    - 잘못된 철자, 외래어 표기법 오류
    - 예: "되" vs "돼", "프로그램" vs "프로그래밍"
+   - 주의: '코들'은 고유명사이므로 '코드'로 수정하지 마세요
 
 2. **띄어쓰기 (spacing)**: 한글 맞춤법 띄어쓰기 규정
    - 조사, 어미, 접사 띄어쓰기 오류
@@ -305,7 +306,7 @@ async function processTextChunk(chunk: TextChunk, apiKey: string, index: number)
 **절대 금지사항:**
 - 문장의 의미나 내용 변경 금지
 - 문제/퀴즈의 정답 변경 금지  
-- 전문 용어나 고유명사 변경 금지
+- 전문 용어나 고유명사 변경 금지 (특히 '코들' 같은 서비스명은 절대 수정 금지)
 - 문장 형태(평어/경어, 구어/문어) 변경 금지
 - 서식이나 레이아웃 변경 금지
 
@@ -329,8 +330,8 @@ async function processTextChunk(chunk: TextChunk, apiKey: string, index: number)
 {
   "corrections": [
     {
-      "original": "텍스트박스 전체 또는 완전한 문장",
-      "revised": "교정된 텍스트", 
+      "original": "오류가 있는 원본 텍스트",
+      "revised": "교정된 텍스트 (반드시 원본과 달라야 함)", 
       "type": "spelling|spacing|punctuation|grammar|long_sentence|expression",
       "reason": "교정 이유 설명",
       "severity": "critical|important|minor"
@@ -338,22 +339,28 @@ async function processTextChunk(chunk: TextChunk, apiKey: string, index: number)
   ]
 }
 
+**중요: corrections 배열에는 실제로 수정이 필요한 항목만 포함하세요.**
+**원본과 수정본이 동일한 경우 절대 포함하지 마세요.**
+**오류가 없으면 빈 배열 {"corrections": []} 을 반환하세요.**
+
 **심각도 기준:**
 - critical: 맞춤법, 띄어쓰기, 명백한 문법 오류 (반드시 수정)
 - important: 문장부호, 긴문장 분할 (권장 수정)
 - minor: 표현 개선 (선택적 수정)
 
-**매우 중요한 점 (반드시 지키세요):**
+**반드시 지켜야 할 핵심 원칙:**
+1. **원본과 수정본이 완전히 동일하면 절대 corrections에 포함하지 마세요**
+2. **실제 오류가 있어서 수정이 필요한 경우만 corrections에 포함하세요**
+3. **수정이 필요 없으면 빈 배열 {"corrections": []} 반환하세요**
+
+**추가 금지사항:**
 - 확실한 오류만 제안하세요
 - 의미 변경이 의심되면 제안하지 마세요
-- 원본과 수정본이 같으면 절대 제안하지 마세요
 - 완전한 문장이 아닌 구문(명사구, 동명사구, 제목 등)에는 마침표를 절대 추가하지 마세요
 - "~하기", "~제시", "~목표"로 끝나는 표현은 완전한 문장이 아니므로 마침표 불필요
-- 교정이 필요하지 않다고 판단되면 해당 항목을 corrections 배열에 포함하지 마세요
-- 교정 이유에서 "필요하다"고 하면서 실제로는 변경하지 않는 모순적 제안은 절대 금지
-- 예: "마침표가 필요하지만 규정에 따라 추가 금지" 같은 제안은 하지 마세요
-- 의심스러우면 제안하지 마세요 (특히 문장부호)
-- 빈 배열 {"corrections": []} 도 완전히 유효한 응답입니다`
+- **'코들'은 고유 서비스명이므로 절대 '코드'로 수정하지 마세요**
+- "수정할 필요 없음" 같은 이유로 corrections에 포함시키지 마세요
+- 의심스러우면 제안하지 마세요 (특히 문장부호)`
           }
         ],
         temperature: 0.1,

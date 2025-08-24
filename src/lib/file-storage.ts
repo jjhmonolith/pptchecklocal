@@ -12,7 +12,7 @@ const readFile = promisify(fs.readFile);
 const unlink = promisify(fs.unlink);
 const mkdir = promisify(fs.mkdir);
 const stat = promisify(fs.stat);
-const readdir = promisify(fs.readdir);
+// const readdir = promisify(fs.readdir); // 현재 사용되지 않음
 
 interface FileData {
   id: string;
@@ -38,7 +38,7 @@ const initDirectories = async () => {
   for (const dir of dirs) {
     try {
       await mkdir(dir, { recursive: true });
-    } catch (error) {
+    } catch {
       console.log(`디렉토리 이미 존재: ${dir}`);
     }
   }
